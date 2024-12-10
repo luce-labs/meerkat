@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
+import MonacoEditor from "@monaco-editor/react";
 import { api } from "@/trpc/react";
 
 export default function ConfigureMeetingModal({
@@ -57,8 +57,6 @@ export default function ConfigureMeetingModal({
     } catch (error) {
       console.error("Error creating room:", error);
     }
-
-    // Redirect to room where live coding actually is
   };
 
   return (
@@ -70,7 +68,7 @@ export default function ConfigureMeetingModal({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Configure Meeting Stuff</DialogTitle>
+          <DialogTitle>Configure Meeting</DialogTitle>
           <DialogClose />
         </DialogHeader>
 
@@ -125,15 +123,17 @@ export default function ConfigureMeetingModal({
             </div>
 
             <div>
-              <Label htmlFor="boilerplateCode" className="mb-2 block">
-                Boilerplate Code
-              </Label>
-              <Textarea
-                id="boilerplateCode"
-                placeholder="Enter your boilerplate code here..."
+              <Label className="mb-2 block">Boilerplate Code</Label>
+              <MonacoEditor
+                height="300px"
+                width="100%"
+                language={language || "javascript"}
                 value={boilerplateCode}
-                onChange={(e) => setBoilerplateCode(e.target.value)}
-                className="min-h-[300px]"
+                onChange={(value) => setBoilerplateCode(value || "")}
+                theme="vs-light"
+                options={{
+                  minimap: { enabled: false },
+                }}
               />
             </div>
           </div>
