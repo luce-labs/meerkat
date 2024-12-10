@@ -2,12 +2,11 @@ import { z } from "zod";
 
 export const createRoomInput = z.object({
   roomName: z.string(),
-  createdAt: z.string(),
-  maxParticipants: z.number().nullable(),
-  boilerplateCode: z.string().nullable(),
-  controlMicrophone: z.boolean(),
-  allowPasting: z.boolean(),
-  programmingLanguage: z.string().nullable(),
+  maxParticipants: z.number().optional(),
+  boilerplateCode: z.string().optional(),
+  controlMicrophone: z.boolean().default(false),
+  allowPasting: z.boolean().default(false),
+  programmingLanguage: z.string().optional(),
 });
 
 export type CreateRoomInput = z.infer<typeof createRoomInput>;
