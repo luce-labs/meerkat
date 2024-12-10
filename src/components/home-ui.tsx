@@ -1,5 +1,6 @@
 "use client";
 
+import ConfigureMeetingModal from "@/app/_components/configureMeetingModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
@@ -8,6 +9,7 @@ import { useState } from "react";
 export function HomeUI() {
   const router = useRouter();
   const [roomId, setRoomId] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleNewRoom = () => {
     const newRoomId = Math.random().toString(36).substring(7);
@@ -19,6 +21,14 @@ export function HomeUI() {
     if (roomId.trim()) {
       router.push(`/room/${roomId}`);
     }
+  };
+
+  const handleConfigureMeeting = () => {
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
   };
 
   return (
@@ -40,7 +50,7 @@ export function HomeUI() {
 
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
             <Button
-              onClick={handleNewRoom}
+              onClick={handleConfigureMeeting}
               className="w-full bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 sm:w-auto"
             >
               New room
@@ -85,6 +95,10 @@ export function HomeUI() {
           </div>
         </div>
       </div>
+      {/* Modal */}
+      {isModalOpen && (
+        <ConfigureMeetingModal isOpen={isModalOpen} onClose={closeModal} />
+      )}
     </div>
   );
 }

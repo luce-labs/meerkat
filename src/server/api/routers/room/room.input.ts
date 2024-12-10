@@ -1,10 +1,14 @@
 import { z } from "zod";
 
-
 export const createRoomInput = z.object({
+  roomName: z.string(),
+  createdAt: z.string(),
+  maxParticipants: z.number(),
+  participantsJoined: z.number(),
   boilerplateCode: z.string(),
   controlMicrophone: z.boolean(),
-  // other stuff we talked about but if there is something else, you should add it.
+  allowPasting: z.boolean(),
+  programmingLanguage: z.string(),
 });
 
 export type CreateRoomInput = z.infer<typeof createRoomInput>;

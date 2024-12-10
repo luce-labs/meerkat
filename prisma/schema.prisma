@@ -18,3 +18,16 @@ model Post {
 
     @@index([name])
 }
+
+model Room {
+    id                  String   @id @default(uuid())
+    roomName            String
+    createdAt           DateTime @default(now())
+    maxParticipants     Int?
+    participantsJoined  Int      @default(0)
+    timeEnded           DateTime @default(now())
+    controlMicrophone   Boolean  @default(false)
+    allowPasting        Boolean  @default(false)
+    boilerplateCode     String?
+    programmingLanguage String?  @default("javascript")
+}
