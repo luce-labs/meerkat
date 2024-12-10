@@ -30,4 +30,8 @@ model Room {
     allowPasting        Boolean  @default(false)
     boilerplateCode     String?
     programmingLanguage String?  @default("javascript")
+
+    @@index([roomName])
+    @@index([createdAt])
+    @@index([timeEnded])
 }
