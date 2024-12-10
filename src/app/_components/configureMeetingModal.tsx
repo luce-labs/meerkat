@@ -41,16 +41,20 @@ export default function ConfigureMeetingModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (roomName === "") {
+      alert("Room name is required"); // fix: use a proper toast library
+      return;
+    }
+
     try {
       const roomData = {
         roomName,
         maxParticipants,
-        programmingLanguage: language,
+        programmingLanguage: language === "" ? "javascript" : language,
         controlMicrophone: muting,
         allowPasting,
-        boilerplateCode,
+        boilerplateCode: boilerplateCode === "" ? null : boilerplateCode,
         createdAt: new Date().toISOString(),
-        participantsJoined: 3,
       };
       await createRoom.mutateAsync(roomData);
       onClose();
