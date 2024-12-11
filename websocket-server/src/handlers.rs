@@ -68,7 +68,7 @@ async fn handle_socket(ws: WebSocket, state: Arc<AppState>) {
                     }
                     Message::Binary(binary) => {
                         // Directly send binary data without conversion
-                        if let Err(e) = tx.send(String::from_utf8(binary.clone()).unwrap_or_else(|_| String::from("Invalid UTF-8"))) {
+                        if let Err(e) = tx.send(base64::encode(binary.clone())) {
                             error!("Failed to broadcast binary: {e}");
                         }
                         info!("Binary message received: {:?}", binary);
