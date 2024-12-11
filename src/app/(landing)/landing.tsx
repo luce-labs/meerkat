@@ -38,7 +38,7 @@ export function LandingPage() {
         <div className="mt-8 flex flex-col space-y-8 lg:mt-24 lg:max-w-3xl xl:max-w-4xl">
           <div className="space-y-6">
             <h1 className="text-3xl font-normal leading-tight text-gray-900 md:text-4xl lg:text-5xl">
-              Collaborative editing
+              Collaborative coding
               <br />
               for everyone
             </h1>
