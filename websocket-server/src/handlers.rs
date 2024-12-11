@@ -46,15 +46,15 @@ pub async fn ws_handler(
 
 async fn handle_socket(ws: WebSocket, state: Arc<AppState>) {
     info!("New WebSocket connection");
-
+    
+    // Create a broadcast channel for this connection
     let (tx, _) = broadcast::channel(100);
     let mut rx = tx.subscribe();
-
+    
     let (mut sender, mut receiver) = ws.split();
-
     let sender = Arc::new(tokio::sync::Mutex::new(sender));
     let sender_clone = Arc::clone(&sender);
-
+    
     tokio::spawn({
         let tx = tx.clone();
         async move {
@@ -67,21 +67,18 @@ async fn handle_socket(ws: WebSocket, state: Arc<AppState>) {
                         info!("Message sent: {text}");
                     }
                     Message::Binary(binary) => {
-                        if let Err(e) =
-                            tx.send(String::from_utf8(binary.clone()).unwrap_or_default())
-                        {
+                        // Directly send binary data without conversion
+                        if let Err(e) = tx.send(String::from_utf8(binary.clone()).unwrap_or_else(|_| String::from("Invalid UTF-8"))) {
                             error!("Failed to broadcast binary: {e}");
                         }
-                        info!("Binary sent: {:?}", binary);
+                        info!("Binary message received: {:?}", binary);
                     }
                     Message::Ping(ping_data) => {
                         let mut sender = sender_clone.lock().await;
                         sender.send(Message::Pong(ping_data.clone())).await.ok();
-                        sender.send(Message::Pong(ping_data.clone())).await.ok();
                         info!("Pong sent: {:?}", ping_data);
                     }
-                    Message::Pong(_) => {
-                    }
+                    Message::Pong(_) => {}
                     Message::Close(_) => {
                         break;
                     }
@@ -92,7 +89,8 @@ async fn handle_socket(ws: WebSocket, state: Arc<AppState>) {
 
     let mut sender = sender.lock().await;
     while let Ok(msg) = rx.recv().await {
-        if sender.send(Message::Binary(msg.into())).await.is_err() {
+        // Send the message as binary
+        if sender.send(Message::Binary(msg.into_bytes())).await.is_err() {
             error!("Failed to send message");
             break;
         }

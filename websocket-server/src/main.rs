@@ -49,7 +49,7 @@ async fn main() {
                 .allow_headers(Any), 
         )
         .route("/create_room", post(create_room_handler))
-        .with_state(state.clone());
+        .with_state(state);
 
     info!("Starting server on {}", address);
 
