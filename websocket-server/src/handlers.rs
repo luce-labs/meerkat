@@ -1,37 +1,38 @@
+use crate::repositories::{IRoomRepository, RoomRepository};
+use crate::{dtos::CreateRoomDto, websocket::AppState};
 use axum::{
-    extract::{Path, State, ws::{WebSocketUpgrade, WebSocket}},
+    extract::{
+        ws::{Message, WebSocket, WebSocketUpgrade},
+        State,
+    },
     response::IntoResponse,
     Json,
 };
 use futures::{SinkExt, StreamExt};
-use sqlx::pool;
 use std::sync::Arc;
 use tokio::sync::broadcast;
-use crate::{dtos::CreateRoomDto, websocket::AppState};
-use crate::repositories::{RoomRepository, IRoomRepository};
+use tracing::{info, error};
 
 #[axum::debug_handler]
 pub async fn create_room_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateRoomDto>,
 ) -> impl IntoResponse {
-    // let (tx, _) = broadcast::channel(16);
-    // state.rooms.lock().unwrap().insert(payload.id, tx);
-
-    // (axum::http::StatusCode::CREATED, "Room created")
-
-    let (tx, _) = broadcast::channel(16);
+    let (tx, _) = broadcast::channel(100);
     state.rooms.lock().unwrap().insert(payload.id.clone(), tx);
 
-    // Insert room into database
     let room_repo = RoomRepository::new().await;
     let result = room_repo.create(&payload.id, &payload.name).await;
-
     match result {
-        Ok(room) => (axum::http::StatusCode::CREATED, format!("Room created: {:?}", room)),
+        Ok(room) => (
+            axum::http::StatusCode::CREATED,
+            info!("Room created: {:?}", room),
+        ),
         Err(err) => {
-            eprintln!("Failed to create room: {:?}", err);
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Failed to create room".to_string())
+            (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                error!("Failed to create room: {:?}", err),
+            )
         }
     }
 }
@@ -39,38 +40,60 @@ pub async fn create_room_handler(
 pub async fn ws_handler(
     State(state): State<Arc<AppState>>,
     ws: WebSocketUpgrade,
-    Path(room_id): Path<String>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_socket(socket, state, room_id))
+    ws.on_upgrade(move |socket| handle_socket(socket, state))
 }
 
-async fn handle_socket(mut ws: WebSocket, state: Arc<AppState>, room_id: String) {
-    let mut rx = {
-        let rooms = state.rooms.lock().unwrap();
-        if let Some(tx) = rooms.get(&room_id) {
-            tx.subscribe()
-        } else {
-            return;
-        }
-    };
+async fn handle_socket(ws: WebSocket, state: Arc<AppState>) {
+    info!("New WebSocket connection");
+
+    let (tx, _) = broadcast::channel(100);
+    let mut rx = tx.subscribe();
 
     let (mut sender, mut receiver) = ws.split();
 
-    tokio::spawn(async move {
-        while let Some(Ok(msg)) = receiver.next().await {
-            if let Ok(text) = msg.into_text() {
-                if let Some(tx) = state.rooms.lock().unwrap().get(&room_id) {
-                    if let Err(e) = tx.send(text.clone()) {
-                        eprintln!("Failed to broadcast: {e}");
+    let sender = Arc::new(tokio::sync::Mutex::new(sender));
+    let sender_clone = Arc::clone(&sender);
+
+    tokio::spawn({
+        let tx = tx.clone();
+        async move {
+            while let Some(Ok(msg)) = receiver.next().await {
+                match msg {
+                    Message::Text(text) => {
+                        if let Err(e) = tx.send(text.clone()) {
+                            error!("Failed to broadcast text: {e}");
+                        }
+                        info!("Message sent: {text}");
+                    }
+                    Message::Binary(binary) => {
+                        if let Err(e) =
+                            tx.send(String::from_utf8(binary.clone()).unwrap_or_default())
+                        {
+                            error!("Failed to broadcast binary: {e}");
+                        }
+                        info!("Binary sent: {:?}", binary);
+                    }
+                    Message::Ping(ping_data) => {
+                        let mut sender = sender_clone.lock().await;
+                        sender.send(Message::Pong(ping_data.clone())).await.ok();
+                        sender.send(Message::Pong(ping_data.clone())).await.ok();
+                        info!("Pong sent: {:?}", ping_data);
+                    }
+                    Message::Pong(_) => {
+                    }
+                    Message::Close(_) => {
+                        break;
                     }
                 }
             }
         }
     });
 
+    let mut sender = sender.lock().await;
     while let Ok(msg) = rx.recv().await {
-        println!("Received message: {msg}");
-        if sender.send(axum::extract::ws::Message::Text(msg)).await.is_err() {
+        if sender.send(Message::Binary(msg.into())).await.is_err() {
+            error!("Failed to send message");
             break;
         }
     }

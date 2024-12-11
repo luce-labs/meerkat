@@ -11,6 +11,6 @@ impl AppState {
     pub fn new() -> Self {
         Self {
             rooms: Arc::new(Mutex::new(HashMap::new())),
-}
+        }
     }
 }
