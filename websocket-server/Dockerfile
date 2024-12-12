@@ -29,6 +29,13 @@ WORKDIR /usr/src/app
 
 # Copy only production dependencies
 COPY package*.json ./
+
+RUN npm install -g typescript
+
+RUN npm install -g ts-node
+
+RUN npm install
+
 RUN npm ci --only=production
 
 # Copy built files from builder
