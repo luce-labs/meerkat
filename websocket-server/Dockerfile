@@ -1,48 +1,48 @@
-# Builder stage
-FROM rustlang/rust:nightly-slim as builder
+# Use official Node.js image as the base
+FROM node:18 AS builder
+
+# Set the working directory
+WORKDIR /usr/src/app
+
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
+RUN npm install -g typescript
+
+RUN npm install -g ts-node
+
+RUN npm install
+
+# Install all dependencies (including dev)
+RUN npm ci
+
+# Copy the entire source code
+COPY . .
+
+# Build the TypeScript code
+RUN npm run build
+
+# Production stage
+FROM node:18 AS production
 
 WORKDIR /usr/src/app
 
-# Install required system dependencies
-RUN apt-get update && \
-    apt-get install -y pkg-config libssl-dev && \
-    rm -rf /var/lib/apt/lists/*
+# Copy only production dependencies
+COPY package*.json ./
 
-# Copy the Cargo.toml and Cargo.lock files
-COPY Cargo.toml ./
+RUN npm install -g typescript
 
-# Copy the source code
-COPY src ./src
-COPY migrations ./migrations
+RUN npm install -g ts-node
 
-# Build the application in release mode
-RUN cargo build --release
+RUN npm install
 
-# Runtime stage
-FROM debian:bookworm-slim
+RUN npm ci --only=production
 
-WORKDIR /app
+# Copy built files from builder
+COPY --from=builder /usr/src/app/dist ./dist
 
-# Install runtime dependencies
-RUN apt-get update && \
-    apt-get install -y libssl3 ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
-# Copy the compiled binary from builder
-COPY --from=builder /usr/src/app/target/release/websocket-server /app/websocket-server
-
-# Copy migrations folder if needed for runtime
-COPY --from=builder /usr/src/app/migrations ./migrations
-
-# Expose the WebSocket port
+# Expose the desired port
 EXPOSE 8080
 
-# set environment variables
-ENV DATABASE_URL="sqlite://db.sqlite"
-ENV ADDRESS="0.0.0.0:8080"
-
-# CREATE db.sqlite
-RUN touch db.sqlite
-
-# Run the binary
-CMD ["./websocket-server"]
+# Run the built JavaScript application
+CMD ["node", "dist/index.js"]
