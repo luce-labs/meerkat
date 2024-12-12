@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const createRoomInput = z.object({
+  userName: z.string(),
   roomName: z.string(),
   maxParticipants: z.number().optional(),
   boilerplateCode: z.string().optional(),

@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 const formSchema = z.object({
+  userName: z.string().min(1, "Name is required"),
   roomName: z.string().min(1, "Room name is required"),
   controlMicrophone: z.boolean().default(false),
   allowPasting: z.boolean().default(false),
@@ -62,6 +63,7 @@ const ConfigureMeetingModal = ({
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      userName: "",
       roomName: "",
       controlMicrophone: false,
       allowPasting: false,
@@ -92,6 +94,32 @@ const ConfigureMeetingModal = ({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="userName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Your Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g., Michael"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                          .toLowerCase()
+                          .replace(/\s+/g, "-");
+                        field.onChange(value);
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    This name will be visible to all participants
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="roomName"

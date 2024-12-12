@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Editor from "@monaco-editor/react";
+import * as monaco from "monaco-editor";
 import { Room } from "@prisma/client";
 import { motion } from "framer-motion";
 import { HardDrive, Mic, MonitorOff, Play, Settings } from "lucide-react";
@@ -25,6 +26,18 @@ export function RoomClient({ room }: RoomClientProps) {
   const docRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
   const bindingRef = useRef<MonacoBinding | null>(null);
+  const [userCursors, setUserCursors] = useState<
+    Map<
+      string,
+      {
+        line: number;
+        column: number;
+        username: string;
+        color: string;
+        isTyping: boolean;
+      }
+    >
+  >(new Map());
 
   // Update editor height when terminal expands/collapses
   useEffect(() => {
@@ -65,9 +78,10 @@ export function RoomClient({ room }: RoomClientProps) {
       // Create text instance for the editor
       const yText = doc.getText("monaco");
 
+      yText.insert(0, room.boilerplateCode ?? "");
+
       // Setup WebSocket provider with retry logic
       const provider = new WebsocketProvider(
-        // "ws://meerkat-production.up.railway.app/ws/",
         "wss://meerkat-production.up.railway.app/ws",
         room.id,
         doc,
@@ -122,6 +136,68 @@ export function RoomClient({ room }: RoomClientProps) {
         } catch (error) {
           console.error("Error processing update:", error);
         }
+      });
+
+      // We have to set the user's actual name here
+      const randomName = room.userName;
+      const randomColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+
+      // Set the local awareness state (user's name and color)
+      providerRef.current.awareness.setLocalStateField("user", {
+        name: randomName,
+        color: randomColor,
+      });
+
+      // Listen to awareness changes and cursor positions
+      provider.awareness.on("change", () => {
+        const awarenessState = provider.awareness.getStates();
+        const newCursors = new Map();
+        awarenessState.forEach((state, clientID) => {
+          const cursorPosition = state?.cursor;
+          const username = state?.user?.name ?? "Anonymous";
+          const color = state?.user?.color ?? "#FF6347";
+          const isTyping = state?.typing ?? false; // Check if the user is typing
+          if (cursorPosition) {
+            newCursors.set(clientID.toString(), {
+              line: cursorPosition.line,
+              column: cursorPosition.column,
+              username,
+              color,
+              isTyping, // Add typing state to the cursor
+            });
+          }
+        });
+        setUserCursors(newCursors);
+      });
+
+      // Monitor cursor position changes in the editor
+      editor.onDidChangeCursorPosition((e: any) => {
+        const currentCursor = e.position;
+        const awareness = provider.awareness;
+        const clientID = awareness.clientID;
+        awareness.setLocalStateField("cursor", {
+          line: currentCursor.lineNumber - 1, // 0-based index
+          column: currentCursor.column - 1, // 0-based index
+        });
+      });
+
+      // Customizing cursor style using Monaco API
+      editor.updateOptions({
+        cursorStyle: "line",
+        cursorWidth: 3,
+      });
+
+      // Track typing status
+      editor.onDidChangeModelContent(() => {
+        // Mark the user as typing whenever they change content
+        const awareness = provider.awareness;
+        const clientID = awareness.clientID;
+        awareness.setLocalStateField("typing", true);
+
+        // Set a timer to stop typing after a short delay
+        setTimeout(() => {
+          awareness.setLocalStateField("typing", false);
+        }, 1000); // Consider a 1-second delay for when typing stops
       });
     } catch (error) {
       console.error("Error setting up collaborative editing:", error);
@@ -223,7 +299,7 @@ export function RoomClient({ room }: RoomClientProps) {
           {/* Editor */}
           <div
             style={{ height: editorHeight }}
-            className="transition-all duration-200"
+            className="relative transition-all duration-200"
           >
             <Editor
               height="100%"
@@ -237,6 +313,50 @@ export function RoomClient({ room }: RoomClientProps) {
                 fontSize: 17,
               }}
             />
+            {/* Render User Cursors */}
+            <div className="pointer-events-none absolute inset-0 delay-1000">
+              {Array.from(userCursors.entries()).map(([clientID, cursor]) => {
+                if (!cursor.isTyping) return null; // Only show when typing
+
+                const editorModel = editorRef.current?.getModel();
+                if (!editorModel || !editorRef.current) return null;
+
+                const editorDomNode = editorRef.current.getDomNode();
+                if (!editorDomNode) return null;
+
+                const position = new monaco.Position(
+                  cursor.line + 1,
+                  cursor.column + 1,
+                );
+                const positionCoords =
+                  editorRef.current.getScrolledVisiblePosition(position);
+
+                if (!positionCoords) return null;
+
+                // Calculate position relative to editor container
+                const cursorLeft =
+                  editorDomNode.offsetLeft + positionCoords.left;
+                const cursorTop = editorDomNode.offsetTop + positionCoords.top;
+
+                return (
+                  <div
+                    key={clientID}
+                    className="absolute whitespace-nowrap delay-1000"
+                    style={{
+                      transform: `translate(${cursorLeft + 10}px, ${cursorTop - 20}px)`,
+                      zIndex: 1000,
+                    }}
+                  >
+                    <div
+                      className="mb-1 rounded-sm px-1.5 py-0.5 text-xs"
+                      style={{ backgroundColor: cursor.color }}
+                    >
+                      {cursor.username}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Terminal */}
@@ -258,31 +378,7 @@ export function RoomClient({ room }: RoomClientProps) {
                 : "bg-opacity-50 hover:bg-opacity-75",
             )}
           >
-            {/* Terminal Header */}
-            <div
-              onClick={() => setIsTerminalExpanded(!isTerminalExpanded)}
-              className="flex h-8 cursor-pointer items-center justify-between px-4 text-gray-600"
-            >
-              <span className="text-sm">Terminal</span>
-              <span className="text-xs">{isTerminalExpanded ? "▼" : "▲"}</span>
-            </div>
-
-            {/* Terminal Content */}
-            <div
-              className={cn(
-                "overflow-hidden transition-all duration-200",
-                isTerminalExpanded ? "opacity-100" : "opacity-0",
-              )}
-              style={{ height: isTerminalExpanded ? "calc(100% - 32px)" : 0 }}
-            >
-              <div className="h-full overflow-auto p-4">
-                <div className="font-mono text-sm text-gray-700">
-                  {isConnected
-                    ? "Connected to collaborative session"
-                    : "Disconnected from collaborative session"}
-                </div>
-              </div>
-            </div>
+            {/* Terminal UI (Add more content here) */}
           </motion.div>
         </div>
       </div>

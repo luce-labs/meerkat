@@ -21,6 +21,7 @@ model Post {
 
 model Room {
     id                  String   @id @default(uuid())
+    userName            String
     roomName            String
     createdAt           DateTime @default(now())
     maxParticipants     Int?
