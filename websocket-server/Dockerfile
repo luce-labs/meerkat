@@ -7,6 +7,12 @@ WORKDIR /usr/src/app
 # Copy package.json and package-lock.json
 COPY package*.json ./
 
+RUN npm install -g typescript
+
+RUN npm install -g ts-node
+
+RUN npm install
+
 # Install all dependencies (including dev)
 RUN npm ci
 
