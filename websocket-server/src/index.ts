@@ -5,7 +5,7 @@ import http from "http";
 import { parseInt as parseNumber } from "lib0/number";
 import { setupWSConnection } from "./utils";
 
-const host: string = process.env.HOST || "localhost";
+const host: string = process.env.HOST || "0.0.0.0";
 const port: number = parseNumber(process.env.PORT || "8080");
 
 const wss = new WebSocketServer({ noServer: true });
