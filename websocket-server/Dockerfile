@@ -42,7 +42,7 @@ RUN npm ci --only=production
 COPY --from=builder /usr/src/app/dist ./dist
 
 # Expose the desired port
-EXPOSE 1234
+EXPOSE 8080
 
 # Run the built JavaScript application
 CMD ["node", "dist/index.js"]
