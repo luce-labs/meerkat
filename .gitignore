@@ -45,6 +45,6 @@ yarn-error.log*
 # idea files
 .idea
 
-# rust cargo
-target
-Cargo.lock
+# websocket server 
+node_modules
+package-lock.json
