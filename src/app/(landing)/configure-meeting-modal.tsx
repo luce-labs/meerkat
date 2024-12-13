@@ -92,7 +92,17 @@ const ConfigureMeetingModal = ({
   };
 
   return (
-    <Dialog open={isModalOpen} onOpenChange={onClose}>
+    <Dialog
+      open={isModalOpen}
+      onOpenChange={(open) => {
+        onClose();
+        setTimeout(() => {
+          if (!open) {
+            document.body.style.pointerEvents = "";
+          }
+        }, 100);
+      }}
+    >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Configure Your Room</DialogTitle>

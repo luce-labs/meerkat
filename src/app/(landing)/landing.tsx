@@ -1,18 +1,19 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import ConfigureMeetingModal from "./configure-meeting-modal";
 import { v4 as uuidv4 } from "uuid";
 
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown";
+import { Input } from "@/components/ui/input";
+
+import ConfigureMeetingModal from "./configure-meeting-modal";
 
 export function LandingPage() {
   const router = useRouter();
