@@ -1,43 +1,39 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import Editor from "@monaco-editor/react";
-import * as monaco from "monaco-editor";
 import { Room } from "@prisma/client";
 import { motion } from "framer-motion";
-import { HardDrive, Mic, MonitorOff, Play, Settings } from "lucide-react";
+import { Mic, MonitorOff, Play, Settings } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { MonacoBinding } from "y-monaco";
-import { WebsocketProvider } from "y-websocket";
-import * as Y from "yjs";
+
+import { Button } from "@/components/ui/button";
+import { useCollaborativeEditor } from "@/lib/hooks/use-collaborative-editor";
+import { useCollaborativeFiles } from "@/lib/hooks/use-collaborative-files";
+import { cn } from "@/lib/utils";
+
+import { FileExplorer } from "./file-explorer";
+import { UserCursors } from "./user-cursors";
 
 interface RoomClientProps {
   room: Room;
 }
 
-export function RoomClient({ room }: RoomClientProps) {
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+export function RoomClient({ room }: Readonly<RoomClientProps>) {
+  const [selectedFile, setSelectedFile] = useState<string>("current.js");
   const [isTerminalExpanded, setIsTerminalExpanded] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const [editorHeight, setEditorHeight] = useState("calc(100% - 32px)");
-  const [isConnected, setIsConnected] = useState(false);
-  const editorRef = useRef<any>();
-  const docRef = useRef<Y.Doc | null>(null);
-  const providerRef = useRef<WebsocketProvider | null>(null);
-  const bindingRef = useRef<MonacoBinding | null>(null);
-  const [userCursors, setUserCursors] = useState<
-    Map<
-      string,
-      {
-        line: number;
-        column: number;
-        username: string;
-        color: string;
-        isTyping: boolean;
-      }
-    >
-  >(new Map());
+
+  const {
+    isConnected,
+    userCursors,
+    initializeCollaboration,
+    editorRef,
+    docRef,
+  } = useCollaborativeEditor(room);
+
+  const { files, addFile, updateFile, getFile, deleteFile } =
+    useCollaborativeFiles(docRef);
 
   // Update editor height when terminal expands/collapses
   useEffect(() => {
@@ -49,166 +45,41 @@ export function RoomClient({ room }: RoomClientProps) {
     }
   }, [isTerminalExpanded]);
 
-  // Cleanup function for Y.js resources
-  const cleanup = () => {
-    if (bindingRef.current) {
-      bindingRef.current.destroy();
-      bindingRef.current = null;
-    }
-    if (providerRef.current) {
-      providerRef.current.destroy();
-      providerRef.current = null;
-    }
-    if (docRef.current) {
-      docRef.current.destroy();
-      docRef.current = null;
+  useEffect(() => {
+    if (!editorRef.current) return;
+
+    const disposable = editorRef.current.onDidChangeModelContent(() => {
+      // Instead of updating the file content directly in the filesMap,
+      // we should get it from the monaco yText since that's what's bound
+      // to the editor
+      if (selectedFile && docRef.current) {
+        const yText = docRef.current.getText("monaco");
+        const content = yText.toJSON();
+
+        // Now update the file's content in the filesMap
+        updateFile(selectedFile, content);
+      }
+    });
+
+    return () => disposable.dispose();
+  }, [selectedFile, editorRef.current]);
+
+  // Handle file selection
+  const handleFileSelect = (fileName: string) => {
+    const file = getFile(fileName);
+    console.log(file?.content);
+    if (file && editorRef.current && docRef.current) {
+      const yText = docRef.current.getText("monaco");
+      console.log("Current yText content before update:", yText.toJSON());
+
+      // Update the monaco text with the selected file's content
+      yText.delete(0, yText.length);
+      yText.insert(0, file.content);
+
+      console.log("Updated yText content:", yText.toJSON());
+      setSelectedFile(fileName);
     }
   };
-
-  // Setup Y.js collaboration when editor mounts
-  function handleEditorDidMount(editor: any, monaco: any) {
-    try {
-      // Cleanup any existing instances
-      cleanup();
-
-      // Initialize new Y.js document
-      const doc = new Y.Doc();
-      docRef.current = doc;
-
-      // Create text instance for the editor
-      const yText = doc.getText("monaco");
-
-      yText.insert(0, room.boilerplateCode ?? "");
-
-      // Setup WebSocket provider with retry logic
-      const provider = new WebsocketProvider(
-        "wss://meerkat-production.up.railway.app/ws",
-        room.id,
-        doc,
-        {
-          connect: true,
-          maxBackoffTime: 5000,
-          disableBc: true, // Disable broadcast channel to prevent duplicate connections
-        },
-      );
-      providerRef.current = provider;
-
-      // Handle connection status
-      provider.on("status", ({ status }: { status: string }) => {
-        console.log("Connection status:", status);
-        setIsConnected(status === "connected");
-      });
-
-      provider.on("sync", (isSynced: boolean) => {
-        console.log("Sync status:", isSynced);
-        if (isSynced) {
-          // If we have synced successfully, ensure the editor has the latest content
-          const editorModel = editor.getModel();
-          if (editorModel) {
-            const currentContent = yText.toString();
-            if (currentContent && currentContent !== editorModel.getValue()) {
-              editorModel.setValue(currentContent);
-            }
-          }
-        }
-      });
-
-      // Create Monaco binding with awareness
-      const binding = new MonacoBinding(
-        yText,
-        editor.getModel(),
-        new Set([editor]),
-        provider.awareness,
-      );
-      bindingRef.current = binding;
-
-      // Store editor reference
-      editorRef.current = editor;
-
-      // Setup error handling for document updates
-      doc.on("update", (update: Uint8Array, origin: any) => {
-        try {
-          console.log("Document updated:", {
-            updateSize: update.length,
-            origin,
-            currentText: yText.toString().length,
-          });
-        } catch (error) {
-          console.error("Error processing update:", error);
-        }
-      });
-
-      // We have to set the user's actual name here
-      const randomName = room.userName;
-      const randomColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
-
-      // Set the local awareness state (user's name and color)
-      providerRef.current.awareness.setLocalStateField("user", {
-        name: randomName,
-        color: randomColor,
-      });
-
-      // Listen to awareness changes and cursor positions
-      provider.awareness.on("change", () => {
-        const awarenessState = provider.awareness.getStates();
-        const newCursors = new Map();
-        awarenessState.forEach((state, clientID) => {
-          const cursorPosition = state?.cursor;
-          const username = state?.user?.name ?? "Anonymous";
-          const color = state?.user?.color ?? "#FF6347";
-          const isTyping = state?.typing ?? false; // Check if the user is typing
-          if (cursorPosition) {
-            newCursors.set(clientID.toString(), {
-              line: cursorPosition.line,
-              column: cursorPosition.column,
-              username,
-              color,
-              isTyping, // Add typing state to the cursor
-            });
-          }
-        });
-        setUserCursors(newCursors);
-      });
-
-      // Monitor cursor position changes in the editor
-      editor.onDidChangeCursorPosition((e: any) => {
-        const currentCursor = e.position;
-        const awareness = provider.awareness;
-        const clientID = awareness.clientID;
-        awareness.setLocalStateField("cursor", {
-          line: currentCursor.lineNumber - 1, // 0-based index
-          column: currentCursor.column - 1, // 0-based index
-        });
-      });
-
-      // Customizing cursor style using Monaco API
-      editor.updateOptions({
-        cursorStyle: "line",
-        cursorWidth: 3,
-      });
-
-      // Track typing status
-      editor.onDidChangeModelContent(() => {
-        // Mark the user as typing whenever they change content
-        const awareness = provider.awareness;
-        const clientID = awareness.clientID;
-        awareness.setLocalStateField("typing", true);
-
-        // Set a timer to stop typing after a short delay
-        setTimeout(() => {
-          awareness.setLocalStateField("typing", false);
-        }, 1000); // Consider a 1-second delay for when typing stops
-      });
-    } catch (error) {
-      console.error("Error setting up collaborative editing:", error);
-      setIsConnected(false);
-    }
-  }
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return cleanup;
-  }, []);
 
   return (
     <div className="flex h-screen flex-col bg-white">
@@ -267,36 +138,19 @@ export function RoomClient({ room }: RoomClientProps) {
 
       {/* Main Content */}
       <div className="grid flex-1 grid-cols-[minmax(280px,_320px)_1fr]">
-        {/* File Explorer */}
-        <div className="border-r border-gray-200 bg-gray-50 p-6">
-          <div className="mb-6 text-sm font-medium text-gray-600">Files</div>
-          <div className="space-y-3">
-            {["file1.readme", "file2.py", "file3.something"].map((file) => (
-              <div
-                key={file}
-                className={cn(
-                  "cursor-pointer rounded-lg p-3 text-sm transition-colors",
-                  selectedFile === file
-                    ? "bg-blue-100 text-blue-900"
-                    : "text-gray-700 hover:bg-gray-100",
-                )}
-                onClick={() => setSelectedFile(file)}
-              >
-                <div className="flex items-center gap-2">
-                  <HardDrive className="h-4 w-4" />
-                  {file}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <FileExplorer
+          files={files}
+          selectedFile={selectedFile}
+          onFileSelect={handleFileSelect}
+          onFileAdd={addFile}
+          onFileDelete={deleteFile}
+        />
 
         {/* Editor and Terminal Container */}
         <div
           ref={containerRef}
           className="relative flex flex-1 flex-col bg-gray-50"
         >
-          {/* Editor */}
           <div
             style={{ height: editorHeight }}
             className="relative transition-all duration-200"
@@ -305,7 +159,7 @@ export function RoomClient({ room }: RoomClientProps) {
               height="100%"
               defaultLanguage={room.programmingLanguage ?? "javascript"}
               defaultValue={room.boilerplateCode ?? "// Start coding here"}
-              onMount={handleEditorDidMount}
+              onMount={initializeCollaboration}
               options={{
                 minimap: { enabled: false },
                 scrollBeyondLastLine: false,
@@ -313,50 +167,7 @@ export function RoomClient({ room }: RoomClientProps) {
                 fontSize: 17,
               }}
             />
-            {/* Render User Cursors */}
-            <div className="pointer-events-none absolute inset-0 delay-1000">
-              {Array.from(userCursors.entries()).map(([clientID, cursor]) => {
-                if (!cursor.isTyping) return null; // Only show when typing
-
-                const editorModel = editorRef.current?.getModel();
-                if (!editorModel || !editorRef.current) return null;
-
-                const editorDomNode = editorRef.current.getDomNode();
-                if (!editorDomNode) return null;
-
-                const position = new monaco.Position(
-                  cursor.line + 1,
-                  cursor.column + 1,
-                );
-                const positionCoords =
-                  editorRef.current.getScrolledVisiblePosition(position);
-
-                if (!positionCoords) return null;
-
-                // Calculate position relative to editor container
-                const cursorLeft =
-                  editorDomNode.offsetLeft + positionCoords.left;
-                const cursorTop = editorDomNode.offsetTop + positionCoords.top;
-
-                return (
-                  <div
-                    key={clientID}
-                    className="absolute whitespace-nowrap delay-1000"
-                    style={{
-                      transform: `translate(${cursorLeft + 10}px, ${cursorTop - 20}px)`,
-                      zIndex: 1000,
-                    }}
-                  >
-                    <div
-                      className="mb-1 rounded-sm px-1.5 py-0.5 text-xs"
-                      style={{ backgroundColor: cursor.color }}
-                    >
-                      {cursor.username}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <UserCursors userCursors={userCursors} editorRef={editorRef} />
           </div>
 
           {/* Terminal */}
@@ -377,8 +188,10 @@ export function RoomClient({ room }: RoomClientProps) {
                 ? "bg-opacity-100"
                 : "bg-opacity-50 hover:bg-opacity-75",
             )}
+            onClick={() => setIsTerminalExpanded(!isTerminalExpanded)}
           >
             {/* Terminal UI (Add more content here) */}
+            <span>Terminal</span>
           </motion.div>
         </div>
       </div>
