@@ -9,12 +9,31 @@ interface PageProps {
 }
 
 export default async function RoomPage({ params }: PageProps) {
-  const room = await db.room.findUnique({
+  let room = await db.room.findUnique({
     where: { id: params.uuid },
   });
 
+  // If room doesn't exist, create a dummy one ???????
   if (!room) {
-    notFound();
+    try {
+      room = await db.room.create({
+        data: {
+          id: params.uuid,
+          userName: "Anonymous",
+          roomName: `Room ${params.uuid.slice(0, 8)}`,
+          createdAt: new Date(),
+          maxParticipants: 10,
+          participantsJoined: 0,
+          controlMicrophone: true,
+          allowPasting: true,
+          boilerplateCode: null,
+          programmingLanguage: null,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to create room:", error);
+      notFound();
+    }
   }
 
   return <RoomClient room={room} />;

@@ -5,6 +5,14 @@ import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import ConfigureMeetingModal from "./configure-meeting-modal";
+import { v4 as uuidv4 } from "uuid";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown";
 
 export function LandingPage() {
   const router = useRouter();
@@ -12,8 +20,10 @@ export function LandingPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleNewRoom = () => {
-    const newRoomId = Math.random().toString(36).substring(7);
-    router.push(`/room/${newRoomId}`);
+    const newRoomId = uuidv4();
+    if (newRoomId.trim()) {
+      router.push(`/room/${newRoomId}`);
+    }
   };
 
   const handleJoinRoom = (e: React.FormEvent) => {
@@ -49,12 +59,19 @@ export function LandingPage() {
           </div>
 
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-            <Button
-              onClick={handleConfigureMeeting}
-              className="w-full bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 sm:w-auto"
-            >
-              New room
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="w-full rounded-md bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 sm:w-auto">
+                New room
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={handleNewRoom}>
+                  Start Instant Meeting
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleConfigureMeeting}>
+                  Schedule Meeting
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <form onSubmit={handleJoinRoom} className="w-full sm:w-auto">
               <div className="relative w-full sm:w-auto">
