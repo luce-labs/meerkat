@@ -1,9 +1,11 @@
-import { db } from "@/server/db";
-import { notFound } from "next/navigation";
-import { RoomClient } from "./room-client";
+import { notFound } from 'next/navigation';
+
+import { db } from '@/server/db';
+
+import { RoomClient } from './room-client';
 
 interface PageProps {
-  params: {
+  readonly params: {
     uuid: string;
   };
 }
