@@ -7,6 +7,7 @@ import { Mic, MonitorOff, Play, Settings } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useCollaborativeEditor } from "@/lib/hooks/use-collaborative-editor";
 import { useCollaborativeFiles } from "@/lib/hooks/use-collaborative-files";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,27 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
   const { files, addFile, updateFile, getFile, deleteFile } =
     useCollaborativeFiles(docRef);
 
+  // Meeting time validation
+  const [meetingStatus, setMeetingStatus] = useState<
+    "not_started" | "in_progress" | "ended"
+  >("not_started");
+
+  useEffect(() => {
+    const now = new Date();
+    const startTime = room.startDateTime
+      ? new Date(room.startDateTime)
+      : new Date();
+    const endTime = room.endDateTime ? new Date(room.endDateTime) : new Date();
+
+    if (now < startTime) {
+      setMeetingStatus("not_started");
+    } else if (now >= startTime && now <= endTime) {
+      setMeetingStatus("in_progress");
+    } else {
+      setMeetingStatus("ended");
+    }
+  }, [room.startDateTime, room.endDateTime]);
+
   // Update editor height when terminal expands/collapses
   useEffect(() => {
     if (containerRef.current) {
@@ -49,14 +71,10 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
     if (!editorRef.current) return;
 
     const disposable = editorRef.current.onDidChangeModelContent(() => {
-      // Instead of updating the file content directly in the filesMap,
-      // we should get it from the monaco yText since that's what's bound
-      // to the editor
       if (selectedFile && docRef.current) {
         const yText = docRef.current.getText("monaco");
         const content = yText.toJSON();
 
-        // Now update the file's content in the filesMap
         updateFile(selectedFile, content);
       }
     });
@@ -67,17 +85,95 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
   // Handle file selection
   const handleFileSelect = (fileName: string) => {
     const file = getFile(fileName);
-    console.log(file?.content);
     if (file && editorRef.current && docRef.current) {
       const yText = docRef.current.getText("monaco");
-      console.log("Current yText content before update:", yText.toJSON());
 
       // Update the monaco text with the selected file's content
       yText.delete(0, yText.length);
       yText.insert(0, file.content);
 
-      console.log("Updated yText content:", yText.toJSON());
       setSelectedFile(fileName);
+    }
+  };
+
+  // Conditionally render editor or meeting status message
+  const renderContent = () => {
+    switch (meetingStatus) {
+      case "not_started":
+        return (
+          <Alert variant="default" className="m-4">
+            <AlertTitle>Meeting Has Not Started</AlertTitle>
+            <AlertDescription>
+              This meeting room will be active from{" "}
+              {room.startDateTime
+                ? new Date(room.startDateTime).toLocaleString()
+                : "Invalid start time"}
+              . Please wait until the scheduled start time.
+            </AlertDescription>
+          </Alert>
+        );
+
+      case "ended":
+        return (
+          <Alert variant="destructive" className="m-4">
+            <AlertTitle>Meeting Ended</AlertTitle>
+            <AlertDescription>
+              This meeting concluded on{" "}
+              {room.endDateTime
+                ? new Date(room.endDateTime).toLocaleString()
+                : "Invalid end time"}
+              . No further editing is possible.
+            </AlertDescription>
+          </Alert>
+        );
+
+      case "in_progress":
+        return (
+          <>
+            <div
+              style={{ height: editorHeight }}
+              className="relative transition-all duration-200"
+            >
+              <Editor
+                height="100%"
+                defaultLanguage={room.programmingLanguage ?? "javascript"}
+                defaultValue={room.boilerplateCode ?? "// Start coding here"}
+                onMount={initializeCollaboration}
+                options={{
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  wordWrap: "on",
+                  fontSize: 17,
+                }}
+              />
+              <UserCursors userCursors={userCursors} editorRef={editorRef} />
+            </div>
+
+            {/* Terminal */}
+            <motion.div
+              layout
+              animate={{
+                height: isTerminalExpanded ? 300 : 32,
+                opacity: 1,
+              }}
+              initial={false}
+              transition={{
+                duration: 0.2,
+                ease: "easeInOut",
+              }}
+              className={cn(
+                "border-t border-gray-200 bg-gray-50 transition-colors",
+                isTerminalExpanded
+                  ? "bg-opacity-100"
+                  : "bg-opacity-50 hover:bg-opacity-75",
+              )}
+              onClick={() => setIsTerminalExpanded(!isTerminalExpanded)}
+            >
+              {/* Terminal UI (Add more content here) */}
+              <span>Terminal</span>
+            </motion.div>
+          </>
+        );
     }
   };
 
@@ -129,6 +225,7 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
             variant="ghost"
             size="sm"
             className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            disabled={meetingStatus !== "in_progress"}
           >
             <Play className="h-4 w-4" />
             Run
@@ -151,48 +248,7 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
           ref={containerRef}
           className="relative flex flex-1 flex-col bg-gray-50"
         >
-          <div
-            style={{ height: editorHeight }}
-            className="relative transition-all duration-200"
-          >
-            <Editor
-              height="100%"
-              defaultLanguage={room.programmingLanguage ?? "javascript"}
-              defaultValue={room.boilerplateCode ?? "// Start coding here"}
-              onMount={initializeCollaboration}
-              options={{
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                wordWrap: "on",
-                fontSize: 17,
-              }}
-            />
-            <UserCursors userCursors={userCursors} editorRef={editorRef} />
-          </div>
-
-          {/* Terminal */}
-          <motion.div
-            layout
-            animate={{
-              height: isTerminalExpanded ? 300 : 32,
-              opacity: 1,
-            }}
-            initial={false}
-            transition={{
-              duration: 0.2,
-              ease: "easeInOut",
-            }}
-            className={cn(
-              "border-t border-gray-200 bg-gray-50 transition-colors",
-              isTerminalExpanded
-                ? "bg-opacity-100"
-                : "bg-opacity-50 hover:bg-opacity-75",
-            )}
-            onClick={() => setIsTerminalExpanded(!isTerminalExpanded)}
-          >
-            {/* Terminal UI (Add more content here) */}
-            <span>Terminal</span>
-          </motion.div>
+          {renderContent()}
         </div>
       </div>
     </div>

@@ -20,17 +20,21 @@ model Post {
 }
 
 model Room {
-    id                  String   @id @default(uuid())
+    id                  String    @id @default(uuid())
     userName            String
+    hostEmail           String?
     roomName            String
-    createdAt           DateTime @default(now())
+    createdAt           DateTime  @default(now())
+    startDateTime       DateTime?
+    endDateTime         DateTime?
+    participantsEmails  String?
     maxParticipants     Int?
-    participantsJoined  Int      @default(0)
-    timeEnded           DateTime @default(now())
-    controlMicrophone   Boolean  @default(false)
-    allowPasting        Boolean  @default(false)
+    participantsJoined  Int       @default(0)
+    timeEnded           DateTime  @default(now())
+    controlMicrophone   Boolean   @default(false)
+    allowPasting        Boolean   @default(false)
     boilerplateCode     String?
-    programmingLanguage String?  @default("javascript")
+    programmingLanguage String?   @default("javascript")
 
     @@index([roomName])
     @@index([createdAt])

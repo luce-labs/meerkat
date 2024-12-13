@@ -31,7 +31,11 @@ import { z } from "zod";
 
 const formSchema = z.object({
   userName: z.string().min(1, "Name is required"),
+  hostEmail: z.string().email("Invalid email"),
   roomName: z.string().min(1, "Room name is required"),
+  startDateTime: z.coerce.date(),
+  endDateTime: z.coerce.date(),
+  participantsEmails: z.string().min(1, "Participants are required"),
   controlMicrophone: z.boolean().default(false),
   allowPasting: z.boolean().default(false),
   boilerplateCode: z.string().optional(),
@@ -65,6 +69,10 @@ const ConfigureMeetingModal = ({
     defaultValues: {
       userName: "",
       roomName: "",
+      hostEmail: "",
+      startDateTime: undefined,
+      endDateTime: undefined,
+      participantsEmails: "",
       controlMicrophone: false,
       allowPasting: false,
       boilerplateCode: "",
@@ -99,7 +107,7 @@ const ConfigureMeetingModal = ({
               name="userName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Your Name</FormLabel>
+                  <FormLabel>Host Name</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="e.g., Michael"
@@ -115,6 +123,30 @@ const ConfigureMeetingModal = ({
                   <FormDescription>
                     This name will be visible to all participants
                   </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="hostEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>host Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g., example@mmail.com"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                          .toLowerCase()
+                          .replace(/\s+/g, "-");
+                        field.onChange(value);
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription></FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
