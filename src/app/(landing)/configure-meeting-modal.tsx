@@ -1,3 +1,13 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronDown, Copy, FileCode, Mic } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
+
+import { DatePicker } from "@/app/(landing)/date-picker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,14 +30,6 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/trpc/react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, Copy, FileCode, Mic } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
 
 const formSchema = z.object({
   userName: z.string().min(1, "Name is required"),
@@ -177,6 +179,54 @@ const ConfigureMeetingModal = ({
                 </FormItem>
               )}
             />
+
+            <div className="space-y-6">
+              <FormField
+                control={form.control}
+                name="startDateTime"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col space-y-2">
+                    <div>
+                      <FormLabel>Start Date</FormLabel>
+                      <FormDescription>
+                        Select when the meeting will start
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <DatePicker
+                        date={field.value}
+                        onDateChange={(date) => field.onChange(date)}
+                        placeholder="Select start date"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="endDateTime"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col space-y-2">
+                    <div>
+                      <FormLabel>End Date and Time</FormLabel>
+                      <FormDescription>
+                        Select when the meeting will end
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <DatePicker
+                        date={field.value}
+                        onDateChange={(date) => field.onChange(date)}
+                        placeholder="Select end date"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Controls Section */}
             <div className="space-y-4">
