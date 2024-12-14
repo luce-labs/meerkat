@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { v4 as uuidv4 } from "uuid";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,42 +11,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown";
-
 import { Input } from "@/components/ui/input";
+import { api } from "@/trpc/react";
 
 import ConfigureMeetingModal from "./configure-meeting-modal";
 
 export function LandingPage() {
-  const router = useRouter();
   const [roomId, setRoomId] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCardOpen, setIsCardOpen] = useState(false);
+  const router = useRouter();
 
-  const handleNewRoom = () => {
-    const newRoomId = uuidv4();
-    if (newRoomId.trim()) {
-      router.push(`/room/${newRoomId}`);
-    }
-  };
+  const createInstantRoomMutation = api.room.createInstant.useMutation({
+    onSuccess: (data) => {
+      router.push(`/room/${data.id}`);
+    },
+  });
 
   const handleJoinRoom = (e: React.FormEvent) => {
     e.preventDefault();
     if (roomId.trim()) {
       router.push(`/room/${roomId}`);
     }
-  };
-
-  const handleConfigureMeeting = () => {
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    openCard();
-  };
-
-  const openCard = () => {
-    setIsCardOpen(true);
   };
 
   const closeCard = () => {
@@ -76,10 +62,22 @@ export function LandingPage() {
                 New room
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem onClick={handleNewRoom}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    toast.promise(createInstantRoomMutation.mutateAsync(), {
+                      loading: "Creating room...",
+                      success: "Room created!",
+                      error: "Error creating room",
+                    });
+                  }}
+                >
                   Start Instant Meeting
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleConfigureMeeting}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setIsModalOpen(true);
+                  }}
+                >
                   Schedule Meeting
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -126,7 +124,13 @@ export function LandingPage() {
       </div>
       {/* Modal */}
       {isModalOpen && (
-        <ConfigureMeetingModal isOpen={isModalOpen} onClose={closeModal} />
+        <ConfigureMeetingModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setIsCardOpen(true);
+          }}
+        />
       )}
     </div>
   );
