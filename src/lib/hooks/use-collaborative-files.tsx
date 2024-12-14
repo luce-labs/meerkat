@@ -96,11 +96,32 @@ export function useCollaborativeFiles(
     filesMap.delete(name);
   };
 
+  const renameFile = (oldName: string, newName: string) => {
+    const filesMap = getFilesMap();
+    if (!filesMap) return;
+
+    const file = filesMap.get(oldName);
+    if (file) {
+      filesMap.set(newName, {
+        ...file,
+        name: newName,
+        lastModified: Date.now(),
+      });
+      filesMap.delete(oldName);
+      
+      if (currentlySelectedFile === oldName) {
+        setCurrentlySelectedFile(newName);
+      }
+    }
+  };
+
   return {
+    files,
     addFile,
     updateFile,
     getFile,
     deleteFile,
-    files,
+    renameFile,
+    currentlySelectedFile,
   };
 }
