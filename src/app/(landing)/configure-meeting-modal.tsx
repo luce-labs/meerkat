@@ -323,7 +323,7 @@ const ConfigureMeetingModal = ({
         </DialogContent>
       </Dialog>
 
-      {/*  This modal should check email messaging, and add a button to retry sending */}
+      {/*  This modal should check email messaging, and add a button to retry sending  if necessary*/}
       {/*  if it fails */}
       {isCardOpen && (
         <div className="pointer-events-auto">
