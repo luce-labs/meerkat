@@ -19,7 +19,7 @@ import ConfigureMeetingModal from "./configure-meeting-modal";
 export function LandingPage() {
   const [roomId, setRoomId] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isCardOpen, setIsCardOpen] = useState(false);
+
   const router = useRouter();
 
   const createInstantRoomMutation = api.room.createInstant.useMutation({
@@ -33,10 +33,6 @@ export function LandingPage() {
     if (roomId.trim()) {
       router.push(`/room/${roomId}`);
     }
-  };
-
-  const closeCard = () => {
-    setIsCardOpen(false);
   };
 
   return (
@@ -128,7 +124,6 @@ export function LandingPage() {
           isOpen={isModalOpen}
           onClose={() => {
             setIsModalOpen(false);
-            setIsCardOpen(true);
           }}
         />
       )}
