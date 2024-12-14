@@ -48,3 +48,5 @@ yarn-error.log*
 # websocket server 
 node_modules
 package-lock.json
+
+migrations

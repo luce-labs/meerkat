@@ -214,7 +214,7 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
 
     case "not_started":
       return (
-        <div className="fixed inset-0 flex items-center justify-center">
+        <div className="pointer-events-auto fixed inset-0 flex items-center justify-center">
           <Alert variant="default" className="m-4 w-fit">
             <AlertTitle>Meeting Has Not Started</AlertTitle>
             <AlertDescription>

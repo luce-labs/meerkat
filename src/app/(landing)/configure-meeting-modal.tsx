@@ -26,6 +26,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,8 +55,9 @@ const ConfigureMeetingModal = ({
   const router = useRouter();
   const createRoomMutation = api.room.create.useMutation({
     onSuccess: (room) => {
-      toast.success("Room created!");
-      router.push(`/room/${room.id}`);
+      toast.success("Room created, email sent to participants!");
+      toast.message("Room ID: " + room.id);
+      // router.push(`/room/${room.id}`);
       onClose();
     },
     onError: (error) => {
