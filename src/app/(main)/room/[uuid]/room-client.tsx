@@ -6,8 +6,15 @@ import { motion } from "framer-motion";
 import { Mic, MonitorOff, Play, Settings } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useCollaborativeEditor } from "@/lib/hooks/use-collaborative-editor";
 import { useCollaborativeFiles } from "@/lib/hooks/use-collaborative-files";
 import { cn } from "@/lib/utils";
@@ -24,6 +31,7 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
   const [isTerminalExpanded, setIsTerminalExpanded] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const [editorHeight, setEditorHeight] = useState("calc(100% - 32px)");
+  const [selectedLanguage, setSelectedLanguage] = useState("javascript");
 
   const {
     isConnected,
@@ -33,7 +41,7 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
     docRef,
   } = useCollaborativeEditor(room);
 
-  const { files, addFile, updateFile, getFile, deleteFile } =
+  const { files, addFile, updateFile, getFile, deleteFile, renameFile } =
     useCollaborativeFiles(docRef);
 
   // Meeting time validation
@@ -93,6 +101,36 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
     }
   };
 
+  const getFileExtension = (language: string) => {
+    switch (language) {
+      case "javascript":
+        return "js";
+      case "typescript":
+        return "ts";
+      case "python":
+        return "py";
+      case "java":
+        return "java";
+      default:
+        return "js";
+    }
+  };
+
+  const handleLanguageChange = (newLanguage: string) => {
+    setSelectedLanguage(newLanguage);
+
+    if (selectedFile) {
+      const fileNameWithoutExt = selectedFile.split(".")[0];
+      const newExt = getFileExtension(newLanguage);
+      const newFileName = `${fileNameWithoutExt}.${newExt}`;
+
+      if (newFileName !== selectedFile) {
+        renameFile(selectedFile, newFileName);
+        setSelectedFile(newFileName);
+      }
+    }
+  };
+
   switch (meetingStatus) {
     case "in_progress":
       return (
@@ -139,6 +177,20 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
               >
                 <Settings className="h-4 w-4" />
               </Button>
+              <Select
+                value={selectedLanguage}
+                onValueChange={handleLanguageChange}
+              >
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="Language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="javascript">JavaScript</SelectItem>
+                  <SelectItem value="typescript">TypeScript</SelectItem>
+                  <SelectItem value="python">Python</SelectItem>
+                  <SelectItem value="java">Java</SelectItem>
+                </SelectContent>
+              </Select>
               <Button
                 variant="ghost"
                 size="sm"
@@ -172,7 +224,7 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
               >
                 <Editor
                   height="100%"
-                  defaultLanguage={room.programmingLanguage ?? "javascript"}
+                  defaultLanguage={selectedLanguage}
                   defaultValue={room.boilerplateCode ?? "// Start coding here"}
                   onMount={initializeCollaboration}
                   options={{
