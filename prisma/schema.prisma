@@ -21,16 +21,13 @@ model Post {
 
 model Room {
     id                  String    @id @default(uuid())
-    userName            String
     hostEmail           String?
     roomName            String
     createdAt           DateTime  @default(now())
     startDateTime       DateTime?
-    endDateTime         DateTime?
     participantsEmails  String?
     maxParticipants     Int?
     participantsJoined  Int       @default(0)
-    timeEnded           DateTime  @default(now())
     controlMicrophone   Boolean   @default(false)
     allowPasting        Boolean   @default(false)
     boilerplateCode     String?
@@ -38,5 +35,4 @@ model Room {
 
     @@index([roomName])
     @@index([createdAt])
-    @@index([timeEnded])
 }

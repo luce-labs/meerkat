@@ -38,7 +38,7 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
 
   // Meeting time validation
   const [meetingStatus, setMeetingStatus] = useState<
-    "not_started" | "in_progress" | "ended"
+    "not_started" | "in_progress"
   >("not_started");
 
   useEffect(() => {
@@ -46,16 +46,13 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
     const startTime = room.startDateTime
       ? new Date(room.startDateTime)
       : new Date();
-    const endTime = room.endDateTime ? new Date(room.endDateTime) : new Date();
 
     if (now < startTime) {
       setMeetingStatus("not_started");
-    } else if (now >= startTime && now <= endTime) {
-      setMeetingStatus("in_progress");
     } else {
-      setMeetingStatus("ended");
+      setMeetingStatus("in_progress");
     }
-  }, [room.startDateTime, room.endDateTime]);
+  }, [room.startDateTime]);
 
   // Update editor height when terminal expands/collapses
   useEffect(() => {
@@ -65,7 +62,7 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
       const newEditorHeight = totalHeight - terminalHeight;
       setEditorHeight(`${newEditorHeight}px`);
     }
-  }, [isTerminalExpanded]);
+  }, [isTerminalExpanded, containerRef.current]);
 
   useEffect(() => {
     if (!editorRef.current) return;
@@ -96,161 +93,138 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
     }
   };
 
-  // Conditionally render editor or meeting status message
-  const renderContent = () => {
-    switch (meetingStatus) {
-      case "not_started":
-        return (
-          <Alert variant="default" className="m-4">
+  switch (meetingStatus) {
+    case "in_progress":
+      return (
+        <div className="pointer-events-auto flex h-screen flex-col bg-white">
+          {/* Header */}
+          <header className="grid h-16 grid-cols-3 items-center border-b border-gray-200 bg-gray-50 px-6">
+            {/* Left section */}
+            <div className="flex items-center gap-2">
+              <div className="text-xl font-medium text-gray-900">Meerkat</div>
+              <div className="text-sm text-gray-500">/ {room.roomName}</div>
+              <div
+                className={cn(
+                  "h-2 w-2 rounded-full",
+                  isConnected ? "bg-green-500" : "bg-red-500",
+                )}
+                title={isConnected ? "Connected" : "Disconnected"}
+              />
+            </div>
+
+            {/* Middle section */}
+            <div className="flex items-center justify-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
+              >
+                <Mic className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
+              >
+                <MonitorOff className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Right section */}
+            <div className="flex items-center justify-end gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                disabled={meetingStatus !== "in_progress"}
+              >
+                <Play className="h-4 w-4" />
+                Run
+              </Button>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <div className="grid flex-1 grid-cols-[minmax(280px,_320px)_1fr]">
+            <FileExplorer
+              files={files}
+              selectedFile={selectedFile}
+              onFileSelect={handleFileSelect}
+              onFileAdd={addFile}
+              onFileDelete={deleteFile}
+            />
+
+            {/* Editor and Terminal Container */}
+            <div
+              ref={containerRef}
+              className="relative flex flex-1 flex-col bg-gray-50"
+            >
+              <div
+                style={{ height: editorHeight }}
+                className="relative transition-all duration-200"
+              >
+                <Editor
+                  height="100%"
+                  defaultLanguage={room.programmingLanguage ?? "javascript"}
+                  defaultValue={room.boilerplateCode ?? "// Start coding here"}
+                  onMount={initializeCollaboration}
+                  options={{
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false,
+                    wordWrap: "on",
+                    fontSize: 17,
+                  }}
+                />
+                <UserCursors userCursors={userCursors} editorRef={editorRef} />
+              </div>
+
+              {/* Terminal */}
+              <motion.div
+                animate={{
+                  height: isTerminalExpanded ? 0 : 32,
+                  opacity: 1,
+                }}
+                initial={false}
+                transition={{
+                  duration: 0.2,
+                  ease: "easeInOut",
+                }}
+                className={cn(
+                  "border-t border-gray-200 bg-gray-50 transition-colors",
+                  isTerminalExpanded
+                    ? "bg-opacity-100"
+                    : "bg-opacity-50 hover:bg-opacity-75",
+                )}
+                onClick={() => setIsTerminalExpanded(!isTerminalExpanded)}
+              >
+                {/* Terminal UI (Add more content here) */}
+                <span>Terminal</span>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      );
+
+    case "not_started":
+      return (
+        <div className="fixed inset-0 flex items-center justify-center">
+          <Alert variant="default" className="m-4 w-fit">
             <AlertTitle>Meeting Has Not Started</AlertTitle>
             <AlertDescription>
               This meeting room will be active from{" "}
-              {room.startDateTime
+              {room.startDateTime?.toLocaleString()
                 ? new Date(room.startDateTime).toLocaleString()
                 : "Invalid start time"}
-              . Please wait until the scheduled start time.
             </AlertDescription>
           </Alert>
-        );
-
-      case "ended":
-        return (
-          <Alert variant="destructive" className="m-4">
-            <AlertTitle>Meeting Ended</AlertTitle>
-            <AlertDescription>
-              This meeting concluded on{" "}
-              {room.endDateTime
-                ? new Date(room.endDateTime).toLocaleString()
-                : "Invalid end time"}
-              . No further editing is possible.
-            </AlertDescription>
-          </Alert>
-        );
-
-      case "in_progress":
-        return (
-          <>
-            <div
-              style={{ height: editorHeight }}
-              className="relative transition-all duration-200"
-            >
-              <Editor
-                height="100%"
-                defaultLanguage={room.programmingLanguage ?? "javascript"}
-                defaultValue={room.boilerplateCode ?? "// Start coding here"}
-                onMount={initializeCollaboration}
-                options={{
-                  minimap: { enabled: false },
-                  scrollBeyondLastLine: false,
-                  wordWrap: "on",
-                  fontSize: 17,
-                }}
-              />
-              <UserCursors userCursors={userCursors} editorRef={editorRef} />
-            </div>
-
-            {/* Terminal */}
-            <motion.div
-              layout
-              animate={{
-                height: isTerminalExpanded ? 300 : 32,
-                opacity: 1,
-              }}
-              initial={false}
-              transition={{
-                duration: 0.2,
-                ease: "easeInOut",
-              }}
-              className={cn(
-                "border-t border-gray-200 bg-gray-50 transition-colors",
-                isTerminalExpanded
-                  ? "bg-opacity-100"
-                  : "bg-opacity-50 hover:bg-opacity-75",
-              )}
-              onClick={() => setIsTerminalExpanded(!isTerminalExpanded)}
-            >
-              {/* Terminal UI (Add more content here) */}
-              <span>Terminal</span>
-            </motion.div>
-          </>
-        );
-    }
-  };
-
-  return (
-    <div className="flex h-screen flex-col bg-white">
-      {/* Header */}
-      <header className="grid h-16 grid-cols-3 items-center border-b border-gray-200 bg-gray-50 px-6">
-        {/* Left section */}
-        <div className="flex items-center gap-2">
-          <div className="text-xl font-medium text-gray-900">Meerkat</div>
-          <div className="text-sm text-gray-500">/ {room.roomName}</div>
-          <div
-            className={cn(
-              "h-2 w-2 rounded-full",
-              isConnected ? "bg-green-500" : "bg-red-500",
-            )}
-            title={isConnected ? "Connected" : "Disconnected"}
-          />
         </div>
-
-        {/* Middle section */}
-        <div className="flex items-center justify-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
-          >
-            <Mic className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
-          >
-            <MonitorOff className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Right section */}
-        <div className="flex items-center justify-end gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-            disabled={meetingStatus !== "in_progress"}
-          >
-            <Play className="h-4 w-4" />
-            Run
-          </Button>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="grid flex-1 grid-cols-[minmax(280px,_320px)_1fr]">
-        <FileExplorer
-          files={files}
-          selectedFile={selectedFile}
-          onFileSelect={handleFileSelect}
-          onFileAdd={addFile}
-          onFileDelete={deleteFile}
-        />
-
-        {/* Editor and Terminal Container */}
-        <div
-          ref={containerRef}
-          className="relative flex flex-1 flex-col bg-gray-50"
-        >
-          {renderContent()}
-        </div>
-      </div>
-    </div>
-  );
+      );
+  }
 }

@@ -1,8 +1,8 @@
-import { notFound } from 'next/navigation';
+import { notFound } from "next/navigation";
 
-import { db } from '@/server/db';
+import { db } from "@/server/db";
 
-import { RoomClient } from './room-client';
+import { RoomClient } from "./room-client";
 
 interface PageProps {
   readonly params: {
@@ -15,13 +15,11 @@ export default async function RoomPage({ params }: PageProps) {
     where: { id: params.uuid },
   });
 
-  // If room doesn't exist, create a dummy one ???????
   if (!room) {
     try {
       room = await db.room.create({
         data: {
           id: params.uuid,
-          userName: "Anonymous",
           roomName: `Room ${params.uuid.slice(0, 8)}`,
           createdAt: new Date(),
           maxParticipants: 10,

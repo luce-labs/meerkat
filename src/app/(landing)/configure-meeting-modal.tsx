@@ -32,12 +32,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/trpc/react";
 
 const formSchema = z.object({
-  userName: z.string().min(1, "Name is required"),
   hostEmail: z.string().email("Invalid email"),
   roomName: z.string().min(1, "Room name is required"),
   startDateTime: z.coerce.date(),
-  endDateTime: z.coerce.date(),
-  participantsEmails: z.string().min(1, "Participants are required"),
   controlMicrophone: z.boolean().default(false),
   allowPasting: z.boolean().default(false),
   boilerplateCode: z.string().optional(),
@@ -69,12 +66,9 @@ const ConfigureMeetingModal = ({
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      userName: "",
       roomName: "",
       hostEmail: "",
       startDateTime: undefined,
-      endDateTime: undefined,
-      participantsEmails: "",
       controlMicrophone: false,
       allowPasting: false,
       boilerplateCode: "",
@@ -114,32 +108,6 @@ const ConfigureMeetingModal = ({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="userName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Host Name</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="e.g., Michael"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value
-                          .toLowerCase()
-                          .replace(/\s+/g, "-");
-                        field.onChange(value);
-                      }}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    This name will be visible to all participants
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <FormField
               control={form.control}
               name="hostEmail"
@@ -207,29 +175,6 @@ const ConfigureMeetingModal = ({
                         date={field.value}
                         onDateChange={(date) => field.onChange(date)}
                         placeholder="Select start date"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="endDateTime"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col space-y-2">
-                    <div>
-                      <FormLabel>End Date and Time</FormLabel>
-                      <FormDescription>
-                        Select when the meeting will end
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <DatePicker
-                        date={field.value}
-                        onDateChange={(date) => field.onChange(date)}
-                        placeholder="Select end date"
                       />
                     </FormControl>
                     <FormMessage />
