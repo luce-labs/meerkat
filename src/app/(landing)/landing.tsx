@@ -20,7 +20,6 @@ export function LandingPage() {
   const router = useRouter();
   const [roomId, setRoomId] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isCardOpen, setIsCardOpen] = useState(false);
 
   const handleNewRoom = () => {
     const newRoomId = uuidv4();
@@ -42,15 +41,6 @@ export function LandingPage() {
 
   const closeModal = () => {
     setIsModalOpen(false);
-    openCard();
-  };
-
-  const openCard = () => {
-    setIsCardOpen(true);
-  };
-
-  const closeCard = () => {
-    setIsCardOpen(false);
   };
 
   return (

@@ -27,6 +27,18 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,11 +66,8 @@ const ConfigureMeetingModal = ({
 }: ConfigureMeetingModalProps) => {
   const router = useRouter();
   const createRoomMutation = api.room.create.useMutation({
-    onSuccess: (room) => {
-      toast.success("Room created, email sent to participants!");
-      toast.message("Room ID: " + room.id);
-      // router.push(`/room/${room.id}`);
-      onClose();
+    onSuccess: () => {
+      setIsCardOpen(true);
     },
     onError: (error) => {
       toast.error(error.message);
@@ -78,7 +87,7 @@ const ConfigureMeetingModal = ({
   });
 
   const [isOpen, setIsOpen] = useState(false);
-
+  const [isCardOpen, setIsCardOpen] = useState(false);
   const onSubmit = (data: FormSchema) => {
     toast.promise(createRoomMutation.mutateAsync(data), {
       loading: "Creating room...",
@@ -88,229 +97,259 @@ const ConfigureMeetingModal = ({
   };
 
   return (
-    <Dialog
-      open={isModalOpen}
-      onOpenChange={(open) => {
-        onClose();
-        setTimeout(() => {
-          if (!open) {
-            document.body.style.pointerEvents = "";
-          }
-        }, 100);
-      }}
-    >
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Configure Your Room</DialogTitle>
-          <DialogDescription>
-            Customize your collaborative coding environment. These settings will
-            apply to joining participants.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog
+        open={isModalOpen}
+        onOpenChange={(open) => {
+          onClose();
+          setTimeout(() => {
+            if (!open) {
+              document.body.style.pointerEvents = "";
+            }
+          }, 100);
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Configure Your Room</DialogTitle>
+            <DialogDescription>
+              Customize your collaborative coding environment. These settings
+              will apply to joining participants.
+            </DialogDescription>
+          </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="hostEmail"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>host Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="e.g., example@mmail.com"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value
-                          .toLowerCase()
-                          .replace(/\s+/g, "-");
-                        field.onChange(value);
-                      }}
-                    />
-                  </FormControl>
-                  <FormDescription></FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="roomName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Room Name</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="e.g., mock-interview"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value
-                          .toLowerCase()
-                          .replace(/\s+/g, "-");
-                        field.onChange(value);
-                      }}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    This name will be visible to all participants
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="space-y-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
-                name="startDateTime"
+                name="hostEmail"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col space-y-2">
-                    <div>
-                      <FormLabel>Start Date</FormLabel>
-                      <FormDescription>
-                        Select when the meeting will start
-                      </FormDescription>
-                    </div>
+                  <FormItem>
+                    <FormLabel>host Email</FormLabel>
                     <FormControl>
-                      <DatePicker
-                        date={field.value}
-                        onDateChange={(date) => field.onChange(date)}
-                        placeholder="Select start date"
+                      <Input
+                        placeholder="e.g., example@mmail.com"
+                        {...field}
+                        onChange={(e) => {
+                          const value = e.target.value
+                            .toLowerCase()
+                            .replace(/\s+/g, "-");
+                          field.onChange(value);
+                        }}
                       />
                     </FormControl>
+                    <FormDescription></FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
 
-            {/* Controls Section */}
-            <div className="space-y-4">
-              {/* Audio Control */}
               <FormField
                 control={form.control}
-                name="controlMicrophone"
+                name="roomName"
                 render={({ field }) => (
-                  <FormItem className="rounded-lg border bg-card p-4">
-                    <div className="flex items-center justify-between space-x-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <Mic className="h-4 w-4 text-muted-foreground" />
-                          <FormLabel className="font-medium">
-                            Audio Control *
-                          </FormLabel>
-                        </div>
-                        <FormDescription>
-                          Allow participants to control their microphone
-                          settings
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </div>
+                  <FormItem>
+                    <FormLabel>Room Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., mock-interview"
+                        {...field}
+                        onChange={(e) => {
+                          const value = e.target.value
+                            .toLowerCase()
+                            .replace(/\s+/g, "-");
+                          field.onChange(value);
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      This name will be visible to all participants
+                    </FormDescription>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Paste Control */}
-              <FormField
-                control={form.control}
-                name="allowPasting"
-                render={({ field }) => (
-                  <FormItem className="rounded-lg border bg-card p-4">
-                    <div className="flex items-center justify-between space-x-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <Copy className="h-4 w-4 text-muted-foreground" />
-                          <FormLabel className="font-medium">
-                            Code Pasting *
-                          </FormLabel>
-                        </div>
+              <div className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="startDateTime"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col space-y-2">
+                      <div>
+                        <FormLabel>Start Date</FormLabel>
                         <FormDescription>
-                          Enable code pasting functionality for all participants
+                          Select when the meeting will start
                         </FormDescription>
                       </div>
                       <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
+                        <DatePicker
+                          date={field.value}
+                          onDateChange={(date) => field.onChange(date)}
+                          placeholder="Select start date"
                         />
                       </FormControl>
-                    </div>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Programming Environment */}
-            <div className="space-y-4 rounded-lg border p-4">
-              <div
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex cursor-pointer items-center justify-between"
-              >
-                <h3 className="font-medium">Programming Environment</h3>
-                <motion.div
-                  animate={{ rotate: isOpen ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                </motion.div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              <AnimatePresence initial={false}>
-                {isOpen && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    style={{ overflow: "hidden" }}
-                  >
-                    <div className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="boilerplateCode"
-                        render={({ field }) => (
-                          <FormItem>
-                            <div className="flex items-center space-x-2">
-                              <FileCode className="h-4 w-4 text-muted-foreground" />
-                              <FormLabel>Starter Code</FormLabel>
-                            </div>
-                            <FormControl>
-                              <Textarea
-                                placeholder="// Starting code in editor..."
-                                className="h-32 resize-none font-mono"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+              {/* Controls Section */}
+              <div className="space-y-4">
+                {/* Audio Control */}
+                <FormField
+                  control={form.control}
+                  name="controlMicrophone"
+                  render={({ field }) => (
+                    <FormItem className="rounded-lg border bg-card p-4">
+                      <div className="flex items-center justify-between space-x-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <Mic className="h-4 w-4 text-muted-foreground" />
+                            <FormLabel className="font-medium">
+                              Audio Control *
+                            </FormLabel>
+                          </div>
+                          <FormDescription>
+                            Allow participants to control their microphone
+                            settings
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </div>
+                    </FormItem>
+                  )}
+                />
 
-            <DialogFooter className="w-full">
-              <Button
-                type="submit"
-                disabled={createRoomMutation.isPending}
-                className="w-full"
-              >
-                {createRoomMutation.isPending ? "Creating..." : "Create Room"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+                {/* Paste Control */}
+                <FormField
+                  control={form.control}
+                  name="allowPasting"
+                  render={({ field }) => (
+                    <FormItem className="rounded-lg border bg-card p-4">
+                      <div className="flex items-center justify-between space-x-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <Copy className="h-4 w-4 text-muted-foreground" />
+                            <FormLabel className="font-medium">
+                              Code Pasting *
+                            </FormLabel>
+                          </div>
+                          <FormDescription>
+                            Enable code pasting functionality for all
+                            participants
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Programming Environment */}
+              <div className="space-y-4 rounded-lg border p-4">
+                <div
+                  onClick={() => setIsOpen(!isOpen)}
+                  className="flex cursor-pointer items-center justify-between"
+                >
+                  <h3 className="font-medium">Programming Environment</h3>
+                  <motion.div
+                    animate={{ rotate: isOpen ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  </motion.div>
+                </div>
+
+                <AnimatePresence initial={false}>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      style={{ overflow: "hidden" }}
+                    >
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="boilerplateCode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <div className="flex items-center space-x-2">
+                                <FileCode className="h-4 w-4 text-muted-foreground" />
+                                <FormLabel>Starter Code</FormLabel>
+                              </div>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="// Starting code in editor..."
+                                  className="h-32 resize-none font-mono"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <DialogFooter className="w-full">
+                <Button
+                  type="submit"
+                  disabled={createRoomMutation.isPending}
+                  className="w-full"
+                >
+                  {createRoomMutation.isPending ? "Creating..." : "Create Room"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/*  This modal should check email messaging, and add a button to retry sending */}
+      {/*  if it fails */}
+      {isCardOpen && (
+        <div className="pointer-events-auto">
+          <AlertDialog open={isCardOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle></AlertDialogTitle>
+                <AlertDialogDescription>
+                  Email sent to participants of the meeting.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  onClick={() => {
+                    setIsCardOpen(false);
+                    onClose();
+                  }}
+                >
+                  Close
+                </AlertDialogCancel>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
+    </>
   );
 };
 
