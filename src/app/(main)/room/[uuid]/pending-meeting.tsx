@@ -1,7 +1,5 @@
 "use client";
 
-import React from "react";
-
 import { AlertTitle, Alert, AlertDescription } from "@/components/ui/alert";
 
 export function PendingMeeting({ room }: { room: any }) {
