@@ -1,5 +1,3 @@
-"use client";
-
 import { AlertTitle, Alert, AlertDescription } from "@/components/ui/alert";
 
 export function PendingMeeting({ room }: { room: any }) {
