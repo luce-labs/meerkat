@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 
 import { db } from "@/server/db";
 
-import RoomStatusManager from "./RoomStatusManager";
+import { RoomClient } from "./room-client";
+import { PendingMeeting } from "./pending-meeting";
 
 interface PageProps {
   readonly params: {
@@ -19,5 +20,13 @@ export default async function RoomPage({ params }: PageProps) {
     notFound();
   }
 
-  return <RoomStatusManager room={room} />;
+  const now = new Date();
+  const startTime = new Date(room.startDateTime || now);
+  const meetingStatus = now < startTime ? "not_started" : "in_progress";
+
+  if (meetingStatus === "not_started") {
+    return <RoomClient room={room} />;
+  }
+
+  return <PendingMeeting room={room} />;
 }

@@ -1,6 +1,11 @@
 import { AlertTitle, Alert, AlertDescription } from "@/components/ui/alert";
+import { Room } from "@prisma/client";
 
-export function PendingMeeting({ room }: { room: any }) {
+interface PendingMeetingProps {
+  room: Room;
+}
+
+export function PendingMeeting({ room }: Readonly<PendingMeetingProps>) {
   return (
     <div className="pointer-events-auto fixed inset-0 flex items-center justify-center">
       <Alert variant="default" className="m-4 w-fit">
