@@ -27,18 +27,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -67,7 +55,8 @@ const ConfigureMeetingModal = ({
   const router = useRouter();
   const createRoomMutation = api.room.create.useMutation({
     onSuccess: () => {
-      setIsCardOpen(true);
+      setIsOpen(false);
+      toast.info("Details sent");
     },
     onError: (error) => {
       toast.error(error.message);
@@ -87,7 +76,6 @@ const ConfigureMeetingModal = ({
   });
 
   const [isOpen, setIsOpen] = useState(false);
-  const [isCardOpen, setIsCardOpen] = useState(false);
   const onSubmit = (data: FormSchema) => {
     toast.promise(createRoomMutation.mutateAsync(data), {
       loading: "Creating room...",
@@ -322,33 +310,6 @@ const ConfigureMeetingModal = ({
           </Form>
         </DialogContent>
       </Dialog>
-
-      {/*  This modal should check email messaging, and add a button to retry sending  if necessary*/}
-      {/*  if it fails */}
-      {isCardOpen && (
-        <div className="pointer-events-auto">
-          <AlertDialog open={isCardOpen}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle></AlertDialogTitle>
-                <AlertDialogDescription>
-                  Email sent to participants of the meeting.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel
-                  onClick={() => {
-                    setIsCardOpen(false);
-                    onClose();
-                  }}
-                >
-                  Close
-                </AlertDialogCancel>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      )}
     </>
   );
 };
