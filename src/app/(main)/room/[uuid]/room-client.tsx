@@ -1,5 +1,6 @@
 "use client";
 
+import * as monaco from "monaco-editor";
 import Editor from "@monaco-editor/react";
 import { Room } from "@prisma/client";
 import { motion } from "framer-motion";
@@ -99,6 +100,13 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
 
   const handleLanguageChange = (newLanguage: string) => {
     setSelectedLanguage(newLanguage);
+
+    if (editorRef.current) {
+      const model = editorRef.current.getModel();
+      if (model) {
+        monaco.editor.setModelLanguage(model, newLanguage);
+      }
+    }
 
     if (selectedFile) {
       const fileNameWithoutExt = selectedFile.split(".")[0];
