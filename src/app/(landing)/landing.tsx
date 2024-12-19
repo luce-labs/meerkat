@@ -1,18 +1,32 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
-export function HomeUI() {
-  const router = useRouter();
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown";
+import { Input } from "@/components/ui/input";
+import { api } from "@/trpc/react";
+
+import ConfigureMeetingModal from "./configure-meeting-modal";
+
+export function LandingPage() {
   const [roomId, setRoomId] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleNewRoom = () => {
-    const newRoomId = Math.random().toString(36).substring(7);
-    router.push(`/room/${newRoomId}`);
-  };
+  const router = useRouter();
+
+  const createInstantRoomMutation = api.room.createInstant.useMutation({
+    onSuccess: (data) => {
+      router.push(`/room/${data.id}`);
+    },
+  });
 
   const handleJoinRoom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +42,7 @@ export function HomeUI() {
         <div className="mt-8 flex flex-col space-y-8 lg:mt-24 lg:max-w-3xl xl:max-w-4xl">
           <div className="space-y-6">
             <h1 className="text-3xl font-normal leading-tight text-gray-900 md:text-4xl lg:text-5xl">
-              Collaborative editing
+              Collaborative coding
               <br />
               for everyone
             </h1>
@@ -39,12 +53,31 @@ export function HomeUI() {
           </div>
 
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-            <Button
-              onClick={handleNewRoom}
-              className="w-full bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 sm:w-auto"
-            >
-              New room
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="w-full rounded-md bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 sm:w-auto">
+                New room
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem
+                  onClick={() => {
+                    toast.promise(createInstantRoomMutation.mutateAsync(), {
+                      loading: "Creating room...",
+                      success: "Room created!",
+                      error: "Error creating room",
+                    });
+                  }}
+                >
+                  Start Instant Meeting
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setIsModalOpen(true);
+                  }}
+                >
+                  Schedule Meeting
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <form onSubmit={handleJoinRoom} className="w-full sm:w-auto">
               <div className="relative w-full sm:w-auto">
@@ -85,6 +118,15 @@ export function HomeUI() {
           </div>
         </div>
       </div>
+      {/* Modal */}
+      {isModalOpen && (
+        <ConfigureMeetingModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
