@@ -35,165 +35,137 @@ interface LoginResponse {
   users?: Pick<User, "id" | "name">[];
 }
 
-class SignalingServer {
-  private app: express.Application;
-  private server: http.Server;
-  private io: Server;
-  private users: Map<string, User>;
+const users = new Map<string, User>();
 
-  constructor() {
-    this.app = express();
-    this.server = http.createServer(this.app);
-    this.users = new Map();
+const handleLogin = (socket: Socket, io: Server) => (data: LoginEvent) => {
+  const { username } = data;
 
-    this.io = new Server(this.server, {
-      cors: {
-        origin: "*",
-        methods: ["GET", "POST"],
-      },
-    });
+  const isUsernameTaken = Array.from(users.values()).some(
+    (user) => user.name === username,
+  );
 
-    this.initializeServer();
+  if (isUsernameTaken) {
+    const response: LoginResponse = {
+      success: false,
+      message: "Username is already taken",
+    };
+    socket.emit("login", response);
+    return;
   }
 
-  private initializeServer() {
-    try {
-      this.io.on("connection", (socket: Socket) => {
-        console.log("New client connected");
+  const userId = uuidv4();
+  const user: User = {
+    id: userId,
+    name: username,
+    socketId: socket.id,
+  };
 
-        this.setupLoginHandler(socket);
-        this.setupOfferHandler(socket);
-        this.setupAnswerHandler(socket);
-        this.setupIceCandidateHandler(socket);
-        this.setupDisconnectHandler(socket);
-      });
+  users.set(socket.id, user);
 
-      const port = process.env.PORT || 8080;
-      this.server.listen(port, () => {
-        console.log(`Socket.IO Signaling Server running on port ${port}`);
+  const response: LoginResponse = {
+    success: true,
+    userId,
+    users: Array.from(users.values()).map((u) => ({
+      id: u.id,
+      name: u.name,
+    })),
+  };
+  socket.emit("login", response);
+
+  socket.broadcast.emit("userJoined", user);
+};
+
+const handleOffer = (socket: Socket, io: Server) => (data: OfferEvent) => {
+  const { to, offer } = data;
+  const sender = users.get(socket.id);
+
+  if (!sender) return;
+
+  const recipient = Array.from(users.values()).find((user) => user.name === to);
+
+  if (recipient) {
+    io.to(recipient.socketId).emit("offer", {
+      from: sender.name,
+      offer,
+    });
+  }
+};
+
+const handleAnswer = (socket: Socket, io: Server) => (data: AnswerEvent) => {
+  const { to, answer } = data;
+  const sender = users.get(socket.id);
+
+  if (!sender) return;
+
+  const recipient = Array.from(users.values()).find((user) => user.name === to);
+
+  if (recipient) {
+    io.to(recipient.socketId).emit("answer", {
+      from: sender.name,
+      answer,
+    });
+  }
+};
+
+const handleIceCandidate =
+  (socket: Socket, io: Server) => (data: IceCandidateEvent) => {
+    const { to, candidate } = data;
+    const sender = users.get(socket.id);
+
+    if (!sender) return;
+
+    const recipient = Array.from(users.values()).find(
+      (user) => user.name === to,
+    );
+
+    if (recipient) {
+      io.to(recipient.socketId).emit("ice-candidate", {
+        from: sender.name,
+        candidate,
       });
-    } catch (error) {
-      console.error("Server initialization failed:", error);
     }
-  }
+  };
 
-  private setupLoginHandler(socket: Socket) {
-    socket.on("login", (data: LoginEvent) => {
-      const { username } = data;
+const handleDisconnect = (socket: Socket) => () => {
+  const user = users.get(socket.id);
 
-      // Check if username is already taken
-      const isUsernameTaken = Array.from(this.users.values()).some(
-        (user) => user.name === username,
-      );
-
-      if (isUsernameTaken) {
-        const response: LoginResponse = {
-          success: false,
-          message: "Username is already taken",
-        };
-        socket.emit("login", response);
-        return;
-      }
-
-      // Create user entry
-      const userId = uuidv4();
-      const user: User = {
-        id: userId,
-        name: username,
-        socketId: socket.id,
-      };
-
-      this.users.set(socket.id, user);
-
-      // Send successful login response
-      const response: LoginResponse = {
-        success: true,
-        userId,
-        users: Array.from(this.users.values()).map((u) => ({
-          id: u.id,
-          name: u.name,
-        })),
-      };
-      socket.emit("login", response);
-
-      // Broadcast new user to all other clients
-      socket.broadcast.emit("userJoined", user);
+  if (user) {
+    users.delete(socket.id);
+    socket.broadcast.emit("userLeft", {
+      id: user.id,
+      name: user.name,
     });
   }
+};
 
-  private setupOfferHandler(socket: Socket) {
-    socket.on("offer", (data: OfferEvent) => {
-      const { to, offer } = data;
-      const sender = this.users.get(socket.id);
+const setupSocketHandlers = (socket: Socket, io: Server) => {
+  console.log("New client connected");
 
-      if (!sender) return;
+  socket.on("login", handleLogin(socket, io));
+  socket.on("offer", handleOffer(socket, io));
+  socket.on("answer", handleAnswer(socket, io));
+  socket.on("ice-candidate", handleIceCandidate(socket, io));
+  socket.on("disconnect", handleDisconnect(socket));
+};
 
-      const recipient = Array.from(this.users.values()).find(
-        (user) => user.name === to,
-      );
+const runServer = () => {
+  const app = express();
+  const server = http.createServer(app);
+  const io = new Server(server, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"],
+    },
+  });
 
-      if (recipient) {
-        this.io.to(recipient.socketId).emit("offer", {
-          from: sender.name,
-          offer,
-        });
-      }
-    });
-  }
+  io.on("connection", (socket) => setupSocketHandlers(socket, io));
 
-  private setupAnswerHandler(socket: Socket) {
-    socket.on("answer", (data: AnswerEvent) => {
-      const { to, answer } = data;
-      const sender = this.users.get(socket.id);
+  const port = process.env.PORT || 8080;
+  server.listen(port, () => {
+    console.log(`Socket.IO Signaling Server running on port ${port}`);
+  });
 
-      if (!sender) return;
+  return server;
+};
 
-      const recipient = Array.from(this.users.values()).find(
-        (user) => user.name === to,
-      );
-
-      if (recipient) {
-        this.io.to(recipient.socketId).emit("answer", {
-          from: sender.name,
-          answer,
-        });
-      }
-    });
-  }
-
-  private setupIceCandidateHandler(socket: Socket) {
-    socket.on("ice-candidate", (data: IceCandidateEvent) => {
-      const { to, candidate } = data;
-      const sender = this.users.get(socket.id);
-
-      if (!sender) return;
-
-      const recipient = Array.from(this.users.values()).find(
-        (user) => user.name === to,
-      );
-
-      if (recipient) {
-        this.io.to(recipient.socketId).emit("ice-candidate", {
-          from: sender.name,
-          candidate,
-        });
-      }
-    });
-  }
-
-  private setupDisconnectHandler(socket: Socket) {
-    socket.on("disconnect", () => {
-      const user = this.users.get(socket.id);
-
-      if (user) {
-        this.users.delete(socket.id);
-        socket.broadcast.emit("userLeft", {
-          id: user.id,
-          name: user.name,
-        });
-      }
-    });
-  }
-}
-
-new SignalingServer();
+runServer();
