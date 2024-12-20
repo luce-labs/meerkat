@@ -4,7 +4,7 @@ import { WebsocketProvider } from "y-websocket";
 import * as Y from "yjs";
 import { FitAddon } from "xterm-addon-fit";
 import { api } from "@/trpc/react";
-import { generateName } from "@/lib/generic-name-generator";
+import { useGenerateName } from "./use-name-generator";
 
 interface TerminalUser {
   name: string;
@@ -32,6 +32,8 @@ export function useCollaborativeTerminal({
   const fitAddonRef = useRef<FitAddon>();
 
   const executeMutation = api.judge0.submit.useMutation();
+
+  const { generatedName, isLoading, error } = useGenerateName();
 
   const cleanup = () => {
     terminalRef.current?.dispose();
@@ -120,10 +122,14 @@ export function useCollaborativeTerminal({
       },
     );
 
-    provider.awareness.setLocalStateField("user", {
-      name: generateName(),
-      isActive: true,
-    });
+    useEffect(() => {
+      if (!isLoading && !error && generatedName) {
+        provider.awareness.setLocalStateField("user", {
+          name: generatedName,
+          isActive: true,
+        });
+      }
+    }, [generatedName, isLoading, error, provider]);
 
     yTerminal.observe((event) => {
       event.changes.delta.forEach((change) => {
