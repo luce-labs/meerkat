@@ -1,8 +1,9 @@
 import { postRouter } from "@/server/api/routers/post";
 import { roomRouter } from "@/server/api/routers/room/room.procedure";
 import { judge0Router } from "./routers/judge0/judge0.procedure";
-import { nameRouter } from "./routers/generateName";
+import { nameRouter } from "./routers/generic-name/generic-name-procedure";
 import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
+
 /**
  * This is the primary router for your server.
  *
