@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { MonacoBinding } from "y-monaco";
 import { WebsocketProvider } from "y-websocket";
 import * as Y from "yjs";
+import { generateName } from "@/lib/generic-name-generator";
 
 import type { Room } from "@prisma/client";
 import type * as monaco from "monaco-editor";
@@ -84,35 +85,6 @@ export function useCollaborativeEditor(room: Room) {
     editorRef.current = editor;
   };
 
-  const genericUsername = () => {
-    const adjectives = [
-      "Cool",
-      "Swift",
-      "Silent",
-      "Fierce",
-      "Brave",
-      "Witty",
-      "Clever",
-      "Jolly",
-    ];
-
-    const nouns = [
-      "Tiger",
-      "Eagle",
-      "Shark",
-      "Panther",
-      "Falcon",
-      "Wolf",
-      "Lion",
-      "Bear",
-    ];
-
-    const randomAdjective =
-      adjectives[Math.floor(Math.random() * adjectives.length)];
-    const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
-
-    return `${randomAdjective}${randomNoun}`;
-  };
   const setupAwareness = (
     provider: WebsocketProvider,
     editor: monaco.editor.IStandaloneCodeEditor,
@@ -120,7 +92,7 @@ export function useCollaborativeEditor(room: Room) {
     const randomColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
 
     provider.awareness.setLocalStateField("user", {
-      name: genericUsername(),
+      name: generateName(),
       color: randomColor,
     });
 
@@ -131,7 +103,7 @@ export function useCollaborativeEditor(room: Room) {
       awarenessState.forEach((state, clientID) => {
         const typedState = state as AwarenessState;
         const cursorPosition = typedState?.cursor;
-        const username = typedState?.user?.name ?? genericUsername();
+        const username = typedState?.user?.name ?? generateName();
         const color = typedState?.user?.color ?? "#FF6347";
         const isTyping = typedState?.typing ?? false;
 
