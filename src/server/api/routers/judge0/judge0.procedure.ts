@@ -89,12 +89,25 @@ export const judge0Router = createTRPCRouter({
       return languages
         .filter((lang) => !lang.is_archived)
         .sort((a, b) => a.name.localeCompare(b.name));
-    } catch (error) {
-      console.error("Failed to fetch languages:", error);
+    } catch (error: unknown) {
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+
+      if (error instanceof Error) {
+        console.error("Failed to fetch languages:", error.message);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch supported languages",
+          cause: error.message,
+        });
+      }
+
+      console.error("Unexpected error:", error);
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to fetch supported languages",
-        cause: error,
+        message: "An unknown error occurred",
+        cause: String(error),
       });
     }
   }),
