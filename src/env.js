@@ -17,6 +17,7 @@ export const env = createEnv({
     SMTP_USER: z.string().optional(),
     SMTP_PASS: z.string().optional(),
     SMTP_FROM_EMAIL: z.string().default("noreply@meerkat.com"),
+    JUDGE0_URL: z.string().default("http://localhost:2358"),
   },
 
   /**
@@ -42,6 +43,7 @@ export const env = createEnv({
     SMTP_PASS: process.env.SMTP_PASS,
     SMTP_FROM_EMAIL: process.env.SMTP_FROM_EMAIL,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    JUDGE0_URL: process.env.JUDGE0_URL,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

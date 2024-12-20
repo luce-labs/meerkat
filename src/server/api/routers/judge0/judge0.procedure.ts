@@ -1,31 +1,11 @@
-import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "../trpc";
+import { createTRPCRouter, publicProcedure } from "../../trpc";
 import { TRPCError } from "@trpc/server";
-import {
-  Judge0Response,
-  Judge0Submission,
-  Judge0Language,
-} from "@/types/judge0";
+import { Judge0Response, Judge0Submission } from "@/types/judge0";
+import { z } from "zod";
+import { judge0ResponseSchema, judge0LanguageSchema } from "./judge0.input";
+import { env } from "@/env";
 
-const JUDGE0_URL = "http://localhost:2358";
-
-const judge0ResponseSchema = z.object({
-  token: z.string(),
-  stdout: z.string().nullable(),
-  stderr: z.string().nullable(),
-  compile_output: z.string().nullable(),
-  message: z.string().nullable(),
-  status: z.object({
-    id: z.number(),
-    description: z.string(),
-  }),
-});
-
-const judge0LanguageSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  is_archived: z.boolean(),
-});
+const JUDGE0_URL = env.JUDGE0_URL ?? "http://localhost:2358";
 
 export const judge0Router = createTRPCRouter({
   submit: publicProcedure
@@ -38,7 +18,7 @@ export const judge0Router = createTRPCRouter({
     )
     .mutation(async ({ input }: { input: Judge0Submission }) => {
       try {
-        const response = await fetch(`${JUDGE0_URL}/submissions?wait=true`, {
+        const response = await fetch(`${JUDGE0_URL}/submissions?wait=false`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -71,16 +51,25 @@ export const judge0Router = createTRPCRouter({
         }
 
         return result;
-      } catch (error) {
+      } catch (error: unknown) {
         if (error instanceof TRPCError) {
           throw error;
         }
 
-        console.error("Judge0 submission error:", error);
+        if (error instanceof Error) {
+          console.error("Judge0 submission error:", error.message);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to execute code",
+            cause: error.message,
+          });
+        }
+
+        console.error("Unexpected error:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to execute code",
-          cause: error,
+          message: "An unknown error occurred",
+          cause: String(error),
         });
       }
     }),
