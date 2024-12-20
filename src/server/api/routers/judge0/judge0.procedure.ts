@@ -35,7 +35,7 @@ export const judge0Router = createTRPCRouter({
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const rawResult = await response.json();
+        const rawResult: unknown = await response.json();
 
         const result: Judge0Response = judge0ResponseSchema.parse(rawResult);
 
