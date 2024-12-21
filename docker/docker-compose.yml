@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  inbucket:
+    image: inbucket/inbucket:latest
+    ports:
+      - "9000:9000"  # Web interface
+      - "2500:2500"  # SMTP
+      - "1100:1100"  # POP3
+    environment:
+      - INBUCKET_WEB_ADDR=:9000
+      - INBUCKET_SMTP_ADDR=:2500
+      - INBUCKET_POP3_ADDR=:1100

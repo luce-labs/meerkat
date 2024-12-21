@@ -1,4 +1,7 @@
 import { postRouter } from "@/server/api/routers/post";
+import { roomRouter } from "@/server/api/routers/room/room.procedure";
+import { judge0Router } from "./routers/judge0/judge0.procedure";
+import { nameRouter } from "./routers/generic-name/generic-name-procedure";
 import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
 
 /**
@@ -8,6 +11,9 @@ import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
  */
 export const appRouter = createTRPCRouter({
   post: postRouter,
+  room: roomRouter,
+  judge0: judge0Router,
+  name: nameRouter,
 });
 
 // export type definition of API

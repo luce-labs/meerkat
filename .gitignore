@@ -44,3 +44,9 @@ yarn-error.log*
 
 # idea files
 .idea
+
+# websocket server 
+node_modules
+package-lock.json
+
+migrations
