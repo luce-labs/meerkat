@@ -1,7 +1,7 @@
+export const dynamic = "force-dynamic";
+
 import { notFound } from "next/navigation";
-
 import { db } from "@/server/db";
-
 import { PendingMeeting } from "./pending-meeting";
 import { RoomClient } from "./room-client";
 

@@ -1,0 +1,46 @@
+version: "3"
+
+services:
+  judge0:
+    image: judge0/judge0:1.13.0
+    volumes:
+      - ./judge0-conf:/judge0.conf
+    ports:
+      - "2358:2358"
+    privileged: true
+    depends_on:
+      - db
+      - redis
+    environment:
+      - RAILS_ENV=production
+      - ALLOW_ORIGIN=*
+      - ENABLE_SUBMISSION_DELETE=true
+      - DB_HOST=db
+      - DB_NAME=judge0
+      - DB_USER=judge0
+      - DB_PASS=judge0pass
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - WORKER_POLL_FREQUENCY=2
+      - CPU_TIME_LIMIT=15
+      - MAX_CPU_TIME_LIMIT=30
+      - ENABLE_WAIT_RESULT=true
+      - COMPILATION_TIME_LIMIT=20
+
+  db:
+    image: postgres:13.0
+    environment:
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=judge0pass
+      - POSTGRES_DB=judge0
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:6.0
+    volumes:
+      - redis-data:/data
+
+volumes:
+  postgres-data:
+  redis-data:

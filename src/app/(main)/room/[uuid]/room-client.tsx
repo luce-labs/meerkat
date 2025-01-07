@@ -18,6 +18,7 @@ import {
 
 import { useCollaborativeEditor } from "@/lib/hooks/use-collaborative-editor";
 import { useCollaborativeFiles } from "@/lib/hooks/use-collaborative-files";
+import { useCollaborativeTerminal } from "@/lib/hooks/use-collaborative-terminal";
 import { cn } from "@/lib/utils";
 
 import { FileExplorer } from "./file-explorer";
@@ -45,6 +46,29 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
   const { files, addFile, updateFile, getFile, deleteFile, renameFile } =
     useCollaborativeFiles(docRef);
 
+  const getLanguageId = (language: string): number => {
+    const languageMap: Record<string, number> = {
+      javascript: 63,
+      typescript: 74,
+      python: 71,
+      java: 62,
+    };
+    return languageMap[language] || 63;
+  };
+
+  const {
+    isConnected: isTerminalConnected,
+    isExecuting,
+    initializeCollaboration: initializeTerminal,
+    executeCode,
+    terminalRef,
+    fitTerminal,
+  } = useCollaborativeTerminal({
+    roomId: room.id,
+    languageId: getLanguageId(selectedLanguage),
+    doc: docRef,
+  });
+
   useEffect(() => {
     if (containerRef.current) {
       const totalHeight = containerRef.current.clientHeight;
@@ -61,7 +85,6 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
       if (selectedFile && docRef.current) {
         const yText = docRef.current.getText("monaco");
         const content = yText.toJSON();
-
         updateFile(selectedFile, content);
       }
     });
@@ -69,16 +92,21 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
     return () => disposable.dispose();
   }, [selectedFile, editorRef.current]);
 
-  // Handle file selection
+  useEffect(() => {
+    if (isTerminalExpanded && terminalRef.current) {
+      const timer = setTimeout(() => {
+        fitTerminal();
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [isTerminalExpanded, terminalRef.current]);
+
   const handleFileSelect = (fileName: string) => {
     const file = getFile(fileName);
     if (file && editorRef.current && docRef.current) {
       const yText = docRef.current.getText("monaco");
-
-      // Update the monaco text with the selected file's content
       yText.delete(0, yText.length);
       yText.insert(0, file.content);
-
       setSelectedFile(fileName);
     }
   };
@@ -120,6 +148,13 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
     }
   };
 
+  const handleRunCode = () => {
+    if (editorRef.current) {
+      const code = editorRef.current.getValue();
+      executeCode(code);
+    }
+  };
+
   return (
     <div className="pointer-events-auto flex h-screen flex-col bg-white">
       {/* Header */}
@@ -131,7 +166,9 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
           <div
             className={cn(
               "h-2 w-2 rounded-full",
-              isConnected ? "bg-green-500" : "bg-red-500",
+              isConnected && isTerminalConnected
+                ? "bg-green-500"
+                : "bg-red-500",
             )}
             title={isConnected ? "Connected" : "Disconnected"}
           />
@@ -179,9 +216,11 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
             variant="ghost"
             size="sm"
             className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            onClick={handleRunCode}
+            disabled={isExecuting}
           >
             <Play className="h-4 w-4" />
-            Run
+            {isExecuting ? "Running..." : "Run"}
           </Button>
         </div>
       </header>
@@ -223,7 +262,7 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
           {/* Terminal */}
           <motion.div
             animate={{
-              height: isTerminalExpanded ? 0 : 32,
+              height: isTerminalExpanded ? 300 : 32,
               opacity: 1,
             }}
             initial={false}
@@ -237,10 +276,36 @@ export function RoomClient({ room }: Readonly<RoomClientProps>) {
                 ? "bg-opacity-100"
                 : "bg-opacity-50 hover:bg-opacity-75",
             )}
-            onClick={() => setIsTerminalExpanded(!isTerminalExpanded)}
           >
-            {/* Terminal UI (Add more content here) */}
-            <span>Terminal</span>
+            <div
+              className="flex cursor-pointer items-center justify-between border-b border-gray-200 px-4 py-1"
+              onClick={() => setIsTerminalExpanded(!isTerminalExpanded)}
+            >
+              <span className="text-sm font-medium">Terminal</span>
+              <div className="flex items-center gap-2">
+                <div
+                  className={cn(
+                    "h-2 w-2 rounded-full",
+                    isTerminalConnected ? "bg-green-500" : "bg-red-500",
+                  )}
+                  title={isTerminalConnected ? "Connected" : "Disconnected"}
+                />
+              </div>
+            </div>
+            {isTerminalExpanded && (
+              <div
+                className="ml-2 h-[calc(100%-32px)]"
+                style={{
+                  height: "100%",
+                  width: "100%",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+                ref={(element) => {
+                  if (element) initializeTerminal(element);
+                }}
+              />
+            )}
           </motion.div>
         </div>
       </div>
