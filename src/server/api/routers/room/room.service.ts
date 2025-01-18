@@ -1,6 +1,6 @@
 import { env } from "@/env";
-import { sendMeetingEmail } from "@/lib/mail/mailer";
 import { generateName } from "@/lib/generic-name-generator";
+import { sendMeetingEmail } from "@/lib/mail/mailer";
 import { db } from "@/server/db";
 
 import type { CreateRoomInput } from "./room.input";
@@ -13,7 +13,7 @@ export async function createRoom(input: CreateRoomInput) {
   });
 
   if (input.hostEmail) {
-    const roomLink = `http://localhost:3000/room/${room.id}`;
+    const roomLink = `${env.NEXT_PUBLIC_APP_URL}/room/${room.id}`;
 
     await sendMeetingEmail({
       roomLink,
@@ -29,13 +29,11 @@ export async function createRoom(input: CreateRoomInput) {
 }
 
 export async function createInstantRoom() {
-  const room = await db.room.create({
+  return await db.room.create({
     data: {
       roomName: await generateName(),
       controlMicrophone: true,
       allowPasting: true,
     },
   });
-
-  return room;
 }
