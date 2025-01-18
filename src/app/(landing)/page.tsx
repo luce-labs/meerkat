@@ -1,12 +1,8 @@
-import { HomeUI } from "@/components/home-ui";
-import { api, HydrateClient } from "@/trpc/server";
-import CurrentDateTime from "../components/current-datetime";
+import { HydrateClient } from "@/trpc/server";
+import CurrentDateTime from "./current-datetime";
+import { LandingPage } from "./landing";
 
 export default async function Home() {
-  const hello = await api.post.hello({ text: "from tRPC" });
-
-  void api.post.getLatest.prefetch();
-
   return (
     <HydrateClient>
       <main className="flex min-h-screen flex-col bg-white">
@@ -30,7 +26,7 @@ export default async function Home() {
           </div>
         </header>
         <div className="flex flex-1 items-center px-48">
-          <HomeUI />
+          <LandingPage />
         </div>
       </main>
     </HydrateClient>
