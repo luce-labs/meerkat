@@ -7,7 +7,7 @@ export const judge0Router = createTRPCRouter({
   submit: publicProcedure
     .input(inputs.judge0SubmissionSchema)
     .mutation(async ({ input }) => {
-      return services.submitCode(input);
+      return services.submitCode(input.source_code, input.language_id);
     }),
 
   getLanguages: publicProcedure.mutation(async () => {
